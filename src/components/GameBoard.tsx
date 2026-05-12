@@ -20,21 +20,21 @@ export const GameBoard = ({
   setSelectedTurretId: (id: string | null) => void
 }) => {
     const TURRET_SLOTS = [
-      { id: '1', x: 60, y: 50 },     // Top left (Base 3 at 140, 50)
-      { id: '2', x: 340, y: 50 },    // Top middle (moved left of Checkpoint at 480, 80)
-      { id: '3', x: 550, y: 60 },    // Top middle-right (between Checkpoint and Base 2 at 680, 90)
-      { id: '4', x: 780, y: 50 },    // Top right (moved further right from Base 2)
-      { id: '5', x: 960, y: 220 },   // Far right (moved up)
-      { id: '6', x: 960, y: 380 },   // Far right bottom
-      { id: '7', x: 720, y: 260 },   // Inner right curve
-      { id: '8', x: 580, y: 300 },   // Center
-      { id: '9', x: 420, y: 260 },   // Center left
-      { id: '10', x: 280, y: 160 },  // Left (moved up to avoid Base 1 at 180, 250)
-      { id: '11', x: 80, y: 280 },   // Far left curve
-      { id: '12', x: 120, y: 380 },  // Above bottom road left
-      { id: '13', x: 320, y: 380 },  // Above bottom road middle-left
-      { id: '14', x: 520, y: 580 },  // Below bottom road middle
-      { id: '15', x: 700, y: 560 },  // Below bottom road right (moved to avoid Airfield planes at 800, 540)
+      { id: '1',  x: 50,  y: 50  },
+      { id: '2',  x: 200, y: 42  },
+      { id: '3',  x: 370, y: 50  },
+      { id: '4',  x: 375, y: 200 },
+      { id: '5',  x: 360, y: 315 },
+      { id: '6',  x: 205, y: 205 },
+      { id: '7',  x: 80,  y: 265 },
+      { id: '8',  x: 50,  y: 380 },
+      { id: '9',  x: 250, y: 390 },
+      { id: '10', x: 80,  y: 480 },
+      { id: '11', x: 255, y: 495 },
+      { id: '12', x: 365, y: 490 },
+      { id: '13', x: 365, y: 600 },
+      { id: '14', x: 190, y: 655 },
+      { id: '15', x: 50,  y: 695 },
     ];
 
     const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
@@ -44,8 +44,8 @@ export const GameBoard = ({
             
             {/* SVG Interactive Ground Layer */}
             <svg 
-              className="w-full h-full max-w-full max-h-full pointer-events-none relative z-10" 
-              viewBox="0 0 1024 608"
+              className="w-full h-full max-w-full max-h-full pointer-events-none relative z-10"
+              viewBox="0 0 420 780"
               preserveAspectRatio="xMidYMid meet"
             >
               {/* Definitions for glows */}
@@ -67,8 +67,8 @@ export const GameBoard = ({
                   <feDropShadow dx="5" dy="8" stdDeviation="4" floodColor="#000000" floodOpacity="0.7"/>
                 </filter>
                 
-                <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-                  <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(249, 115, 22, 0.05)" strokeWidth="1" />
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(249, 115, 22, 0.05)" strokeWidth="1" />
                 </pattern>
                 
                 {/* Camouflage Patterns for Units */}
@@ -103,15 +103,14 @@ export const GameBoard = ({
                   <stop offset="100%" stopColor="#1e293b" />
                 </linearGradient>
                 {/* Topographical Line Patterns */}
-                <path id="topo1" d="M -100 200 Q 150 150 400 300 T 800 100 T 1100 400" fill="none" stroke="rgba(249, 115, 22, 0.1)" strokeWidth="1.5" />
-                <path id="topo2" d="M -100 250 Q 150 200 400 350 T 800 150 T 1100 450" fill="none" stroke="rgba(249, 115, 22, 0.08)" strokeWidth="1" />
-                <path id="topo3" d="M -100 300 Q 150 250 400 400 T 800 200 T 1100 500" fill="none" stroke="rgba(249, 115, 22, 0.06)" strokeWidth="0.5" />
-                
-                <path id="topo4" d="M -100 450 Q 200 600 500 500 T 1100 700" fill="none" stroke="rgba(249, 115, 22, 0.1)" strokeWidth="1.5" />
-                <path id="topo5" d="M -100 500 Q 200 650 500 550 T 1100 750" fill="none" stroke="rgba(249, 115, 22, 0.08)" strokeWidth="1" />
+                <path id="topo1" d="M -50 180 Q 100 140 250 220 T 450 160" fill="none" stroke="rgba(249, 115, 22, 0.1)" strokeWidth="1.5" />
+                <path id="topo2" d="M -50 230 Q 100 190 250 270 T 450 210" fill="none" stroke="rgba(249, 115, 22, 0.07)" strokeWidth="1" />
+                <path id="topo3" d="M -50 480 Q 120 440 260 510 T 450 460" fill="none" stroke="rgba(249, 115, 22, 0.08)" strokeWidth="1" />
+                <path id="topo4" d="M -50 600 Q 130 560 280 620 T 450 580" fill="none" stroke="rgba(249, 115, 22, 0.1)" strokeWidth="1.5" />
+                <path id="topo5" d="M -50 650 Q 130 610 280 670 T 450 630" fill="none" stroke="rgba(249, 115, 22, 0.07)" strokeWidth="1" />
               </defs>
 
-              <rect x="0" y="0" width="1024" height="608" fill="url(#grid)" />
+              <rect x="0" y="0" width="420" height="780" fill="url(#grid)" />
               
               <use href="#topo1" />
               <use href="#topo2" />
@@ -121,113 +120,81 @@ export const GameBoard = ({
 
               <g filter="url(#groundShadow)">
                 {/* Sand Border Base */}
-                <path d="M -50 120 C 200 120 250 80 450 150 S 850 200 850 350 S 650 500 450 450 S 150 580 -50 500" 
-                      stroke="#b28d57" strokeWidth="94" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+                <path d="M -20 120 C 90 65 250 65 370 135 C 405 195 405 275 340 315 C 270 355 130 370 110 428 C 90 486 225 542 360 567 C 400 585 235 658 -20 682"
+                      stroke="#b28d57" strokeWidth="58" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
                 {/* Sand Road */}
-                <path d="M -50 120 C 200 120 250 80 450 150 S 850 200 850 350 S 650 500 450 450 S 150 580 -50 500" 
-                      stroke="#d4ac75" strokeWidth="80" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="1" />
+                <path d="M -20 120 C 90 65 250 65 370 135 C 405 195 405 275 340 315 C 270 355 130 370 110 428 C 90 486 225 542 360 567 C 400 585 235 658 -20 682"
+                      stroke="#d4ac75" strokeWidth="46" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="1" />
                 {/* Dirt Tracks */}
-                <path d="M -50 120 C 200 120 250 80 450 150 S 850 200 850 350 S 650 500 450 450 S 150 580 -50 500" 
-                      stroke="#c09861" strokeWidth="20" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
+                <path d="M -20 120 C 90 65 250 65 370 135 C 405 195 405 275 340 315 C 270 355 130 370 110 428 C 90 486 225 542 360 567 C 400 585 235 658 -20 682"
+                      stroke="#c09861" strokeWidth="12" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
               </g>
 
               {/* Army Base Camps & Decor */}
               <g filter="url(#blackShadow)">
-                {/* Base Camp 1 (Near start) */}
-                <g transform="translate(180, 250) rotate(-15)">
-                  {/* Tent 1 */}
+                {/* Base Camp 1 (left side, mid-height) */}
+                <g transform="translate(100, 265) rotate(-12)">
                   <g transform="translate(0, 0)">
-                    <rect x="-20" y="-15" width="40" height="30" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-20" y1="0" x2="20" y2="0" stroke="#2b3011" strokeWidth="2" />
+                    <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
+                    <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
                     <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
-                    <path d="M -10 -8 Q 0 -2 -5 5 T -10 10" fill="#3a4018" opacity="0.6"/>
-                    <path d="M 5 10 Q 8 2 12 -5" fill="#3a4018" opacity="0.5"/>
                   </g>
-                  {/* Tent 2 */}
-                  <g transform="translate(50, 10)">
-                    <rect x="-20" y="-15" width="40" height="30" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-20" y1="0" x2="20" y2="0" stroke="#2b3011" strokeWidth="2" />
+                  <g transform="translate(38, 7)">
+                    <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
+                    <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
                     <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
-                    <path d="M -12 8 Q -3 2 -8 -5 T -12 -12" fill="#3a4018" opacity="0.6"/>
                   </g>
                 </g>
                 
-                {/* Checkpoint Barricade */}
-                <g transform="translate(480, 80) rotate(5)">
-                  <rect x="-2" y="-30" width="4" height="60" fill="#64748b" />
-                  <line x1="-2" y1="-30" x2="25" y2="0" stroke="#111" strokeWidth="1.5" />
-                  <rect x="22" y="-4" width="6" height="8" fill="#475569" stroke="#111" />
-                  {/* Sandbags */}
-                  <path d="M -10 -40 Q -5 -45 0 -40 Q 5 -45 10 -40 Q 15 -45 20 -40 L 20 -30 L -10 -30 Z" fill="#d4d4d8" stroke="#71717a" strokeWidth="1" />
-                  <circle cx="5" cy="-35" r="4" fill="#3f3f46" />
+                {/* Checkpoint Barricade (center upper) */}
+                <g transform="translate(200, 188) rotate(5)">
+                  <rect x="-2" y="-25" width="4" height="50" fill="#64748b" />
+                  <line x1="-2" y1="-25" x2="20" y2="0" stroke="#111" strokeWidth="1.5" />
+                  <rect x="18" y="-4" width="5" height="8" fill="#475569" stroke="#111" />
+                  <path d="M -8 -32 Q -4 -36 0 -32 Q 4 -36 8 -32 Q 12 -36 16 -32 L 16 -25 L -8 -25 Z" fill="#d4d4d8" stroke="#71717a" strokeWidth="1" />
+                  <circle cx="4" cy="-29" r="3" fill="#3f3f46" />
                 </g>
 
-                {/* Base Camp 2 (Top right) */}
-                <g transform="translate(680, 90) rotate(30)">
+                {/* Base Camp 2 (top right corner) */}
+                <g transform="translate(352, 62) rotate(15)">
                   <g transform="translate(0, 0)">
-                    <rect x="-20" y="-15" width="40" height="30" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-20" y1="0" x2="20" y2="0" stroke="#2b3011" strokeWidth="2" />
+                    <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
+                    <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
                     <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
                   </g>
-                  <g transform="translate(-45, -20)">
-                    <rect x="-20" y="-15" width="40" height="30" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-20" y1="0" x2="20" y2="0" stroke="#2b3011" strokeWidth="2" />
-                    <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
-                  </g>
-                  <g transform="translate(0, -50)">
-                    <rect x="-20" y="-15" width="40" height="30" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-20" y1="0" x2="20" y2="0" stroke="#2b3011" strokeWidth="2" />
+                  <g transform="translate(-36, -16)">
+                    <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
+                    <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
                     <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
                   </g>
                 </g>
 
-                {/* Base Camp 3 (Top Left) */}
-                <g transform="translate(140, 50) rotate(5)">
-                  <g transform="translate(0, 0)">
-                    <rect x="-20" y="-15" width="40" height="30" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-20" y1="0" x2="20" y2="0" stroke="#2b3011" strokeWidth="2" />
-                    <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
+                {/* Airfield (bottom) */}
+                <g transform="translate(290, 716)">
+                  <rect x="-28" y="-18" width="56" height="36" fill="#3e451b" rx="4" stroke="#2b3011" strokeWidth="2"/>
+                  <line x1="-28" y1="-8" x2="28" y2="-8" stroke="#2b3011" strokeWidth="2" />
+                  <line x1="-28" y1="8" x2="28" y2="8" stroke="#2b3011" strokeWidth="2" />
+                  <g transform="translate(-42, 26) rotate(-20)">
+                    <path d="M-16,-3 L20,0 L-16,3 Z" fill="#64748b" stroke="#111" strokeWidth="1" />
+                    <path d="M-4,-16 L8,0 L-4,16 Z" fill="#475569" stroke="#111" strokeWidth="1" />
+                    <circle cx="8" cy="0" r="2.5" fill="#0ea5e9" stroke="#111" strokeWidth="1" />
                   </g>
-                  {/* Parked Vehicles */}
-                  <g transform="translate(50, -10) rotate(-10)">
-                    <rect x="-15" y="-8" width="30" height="16" rx="2" fill="#324a38" stroke="#111" />
-                    <rect x="-8" y="-6" width="20" height="12" fill="#223326" />
-                  </g>
-                  <g transform="translate(90, 0) rotate(-5)">
-                    <rect x="-15" y="-8" width="30" height="16" rx="2" fill="#324a38" stroke="#111" />
-                    <rect x="-8" y="-6" width="20" height="12" fill="#223326" />
-                  </g>
-                </g>
-
-                {/* Base Camp 4 (Bottom Right Airfield) */}
-                <g transform="translate(860, 500)">
-                  <g transform="translate(0, -40)">
-                    <rect x="-30" y="-20" width="60" height="40" fill="#3e451b" rx="4" stroke="#2b3011" strokeWidth="2"/>
-                    <line x1="-30" y1="-10" x2="30" y2="-10" stroke="#2b3011" strokeWidth="2" />
-                    <line x1="-30" y1="10" x2="30" y2="10" stroke="#2b3011" strokeWidth="2" />
-                  </g>
-                  {/* Grounded Planes */}
-                  <g transform="translate(-60, 40) rotate(-15)">
-                    <path d="M-20,-4 L25,0 L-20,4 Z" fill="#64748b" stroke="#111" strokeWidth="1" />
-                    <path d="M-5,-20 L10,0 L-5,20 Z" fill="#475569" stroke="#111" strokeWidth="1" />
-                    <circle cx="10" cy="0" r="3" fill="#0ea5e9" stroke="#111" strokeWidth="1" />
-                  </g>
-                  <g transform="translate(30, 60) rotate(-40)">
-                    <path d="M-20,-4 L25,0 L-20,4 Z" fill="#64748b" stroke="#111" strokeWidth="1" />
-                    <path d="M-5,-20 L10,0 L-5,20 Z" fill="#475569" stroke="#111" strokeWidth="1" />
-                    <circle cx="10" cy="0" r="3" fill="#0ea5e9" stroke="#111" strokeWidth="1" />
+                  <g transform="translate(22, 44) rotate(-35)">
+                    <path d="M-16,-3 L20,0 L-16,3 Z" fill="#64748b" stroke="#111" strokeWidth="1" />
+                    <path d="M-4,-16 L8,0 L-4,16 Z" fill="#475569" stroke="#111" strokeWidth="1" />
+                    <circle cx="8" cy="0" r="2.5" fill="#0ea5e9" stroke="#111" strokeWidth="1" />
                   </g>
                 </g>
               </g>
 
               {/* Glowing Entry / Exit Portals */}
-              <circle cx="0" cy="120" r="40" fill="#f97316" opacity="0.05" filter="url(#neonGlow)" />
-              <line x1="0" y1="70" x2="0" y2="170" stroke="#f97316" strokeWidth="4" filter="url(#neonGlow)" />
-              <line x1="-15" y1="70" x2="-15" y2="170" stroke="#f97316" strokeWidth="2" opacity="0.4" />
-              
-              <circle cx="0" cy="500" r="40" fill="#f97316" opacity="0.05" filter="url(#neonGlow)" />
-              <line x1="0" y1="450" x2="0" y2="550" stroke="#f97316" strokeWidth="4" filter="url(#neonGlow)" />
-              <line x1="-15" y1="450" x2="-15" y2="550" stroke="#f97316" strokeWidth="2" opacity="0.4" />
+              <circle cx="0" cy="120" r="30" fill="#f97316" opacity="0.05" filter="url(#neonGlow)" />
+              <line x1="0" y1="90" x2="0" y2="150" stroke="#f97316" strokeWidth="4" filter="url(#neonGlow)" />
+              <line x1="-12" y1="90" x2="-12" y2="150" stroke="#f97316" strokeWidth="2" opacity="0.4" />
+
+              <circle cx="0" cy="682" r="30" fill="#f97316" opacity="0.05" filter="url(#neonGlow)" />
+              <line x1="0" y1="652" x2="0" y2="712" stroke="#f97316" strokeWidth="4" filter="url(#neonGlow)" />
+              <line x1="-12" y1="652" x2="-12" y2="712" stroke="#f97316" strokeWidth="2" opacity="0.4" />
 
               {/* Render Enemies */}
               {gameState.enemies.map(enemy => (
@@ -750,7 +717,7 @@ export const GameBoard = ({
                    initial={{ opacity: 0 }}
                    animate={{ opacity: [0, 0.4, 0.1, 0.6, 0] }}
                    transition={{ duration: 1.5, times: [0, 0.2, 0.4, 0.6, 1], ease: "easeInOut", delay: 0.5 }}
-                   x="0" y="0" width="1000" height="700" fill="#f97316" style={{ mixBlendMode: 'color-dodge' }} pointerEvents="none"
+                   x="0" y="0" width="420" height="780" fill="#f97316" style={{ mixBlendMode: 'color-dodge' }} pointerEvents="none"
                  />
               )}
 

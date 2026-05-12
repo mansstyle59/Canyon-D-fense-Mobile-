@@ -1,4 +1,4 @@
-export const SVG_PATH = "M -50 120 C 200 120 250 80 450 150 S 850 200 850 350 S 650 500 450 450 S 150 580 -50 500";
+export const SVG_PATH = "M -20 120 C 90 65 250 65 370 135 C 405 195 405 275 340 315 C 270 355 130 370 110 428 C 90 486 225 542 360 567 C 400 585 235 658 -20 682";
 
 let cachedPathPoints: {x: number, y: number}[] | null = null;
 let pathLength = 0;
