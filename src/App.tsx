@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Play, Pause, Crosshair, Zap, Target, Flame, Rocket, AlertTriangle, Plane, FastForward } from 'lucide-react';
+import { Play, Pause, Crosshair, Zap, Target, Flame, Rocket, Plane, FastForward } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TOWER_CONFIGS } from './constants';
 import { GameBoard } from './components/GameBoard';
@@ -84,9 +84,18 @@ export default function App() {
               <span className="text-sm md:text-xl font-mono tracking-tighter leading-none text-stone-800">{level}</span>
             </div>
             <div className="w-px h-6 md:h-8 bg-[#d4c3a3]"></div>
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-[52px]">
               <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-green-700 font-bold opacity-80 mb-0.5 md:mb-1">Vague</span>
               <span className="text-sm md:text-xl font-mono tracking-tighter leading-none text-stone-800">{wave} <span className="text-stone-500 text-xs md:text-sm">/ {maxWaves}</span></span>
+              <div className="w-full mt-1 h-[3px] bg-stone-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${Math.round(((waveActive ? wave - 0.5 : wave - 1) / maxWaves) * 100)}%`,
+                    background: waveActive ? '#f97316' : '#22c55e',
+                  }}
+                />
+              </div>
             </div>
             <div className="w-px h-6 md:h-8 bg-[#d4c3a3]"></div>
             <div className="flex flex-col">
@@ -349,7 +358,7 @@ export default function App() {
                   <div className="flex items-center justify-center">
                     {type === 'mitrailleuse' && <Crosshair className="w-3.5 h-3.5 md:w-5 md:h-5 text-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)]" />}
                     {type === 'canon' && <Zap className="w-3.5 h-3.5 md:w-5 md:h-5 text-orange-400 drop-shadow-[0_0_5px_rgba(251,146,60,0.8)]" />}
-                    {type === 'mortier' && <Flame className="w-3.5 h-3.5 md:w-5 md:h-5 text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]" />}
+                    {type === 'mortier' && <Flame className="w-3.5 h-3.5 md:w-5 md:h-5 text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.8)]" />}
                     {type === 'missile' && <Rocket className="w-3.5 h-3.5 md:w-5 md:h-5 text-pink-400 drop-shadow-[0_0_5px_rgba(244,114,182,0.8)]" />}
                     {type === 'dca' && <Target className="w-3.5 h-3.5 md:w-5 md:h-5 text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]" />}
                   </div>
