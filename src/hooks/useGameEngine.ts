@@ -34,7 +34,6 @@ const getLevelWaves = (level: number) => {
        return { count: 4 + waveNumber * 2, type: types[waveNumber - 1] || 'squad', interval: 1.8 - (waveNumber * 0.1), hpMult: 0.8 + (waveNumber * 0.1) } as any;
     }
     
-    // As levels progress, we introduce harder units
     let types = ['jeep', 'squad'];
     if (waveNumber > 2) types.push('buggy', 'motorcycle');
     if (waveNumber > 4) types.push('apc', 'medic_truck');
@@ -42,7 +41,6 @@ const getLevelWaves = (level: number) => {
     if (waveNumber > 8) types.push('stealth_heli');
     if (waveNumber > 12) types.push('heavy_tank');
     
-    // Instead of selecting a single type, we return the array. The spawner will mix them.
     return { count: 8 + Math.floor(waveNumber * 1.5), type: types, interval: Math.max(0.5, 1.5 - (waveNumber * 0.03)), hpMult: 1.0 + (waveNumber * 0.15) };
   });
 };
@@ -155,7 +153,6 @@ export function useGameEngine() {
 
     const state = stateRef.current;
     
-    // Quick escape if not playing
     if (state.status !== 'playing') {
       requestRef.current = requestAnimationFrame(updateGame);
       return;
@@ -163,9 +160,7 @@ export function useGameEngine() {
 
     let { money, lives, wave, enemies, turrets, projectiles, waveActive } = state;
     let newStatus = state.status;
-    let waveCompleted = false;
 
-    // 1. Spawning enemies
     const currentWaves = wavesRef.current;
     const currentWaveInfo = currentWaves[wave - 1];
     if (waveActive && currentWaveInfo && waveDataRef.current.spawned < currentWaveInfo.count) {
@@ -203,7 +198,6 @@ export function useGameEngine() {
         }];
       }
     } else if (waveActive && enemies.length === 0 && waveDataRef.current.spawned >= (currentWaveInfo?.count ?? 0)) {
-       // Wave completed — award bonus
        const waveBonus = 50 + wave * 25;
        money += waveBonus;
        waveActive = false;
@@ -217,13 +211,11 @@ export function useGameEngine() {
 
     const { length: totalPathLength } = getPathPoints();
 
-    // 2. Move enemies
     let newEnemies = [];
     for (const enemy of enemies) {
       const nextProgress = enemy.progress + enemy.speed * deltaTime;
       
       if (nextProgress >= totalPathLength && totalPathLength > 0) {
-        // Enemy reached base
         if (enemy.isBoss) {
           lives -= 5;
         } else if (enemy.maxHp > 800) {
@@ -245,7 +237,6 @@ export function useGameEngine() {
           : getPointOnPath(nextProgress);
         let rotation = enemy.rotation;
         
-        // update rotation if moving
         if (pt.x !== enemy.x || pt.y !== enemy.y) {
            rotation = Math.atan2(pt.y - enemy.y, pt.x - enemy.x) * (180 / Math.PI);
         }
@@ -261,11 +252,9 @@ export function useGameEngine() {
     }
     enemies = newEnemies;
 
-    // 3. Special Enemy Abilities Logic and Target Acquisition
     const newProjectiles = [...projectiles];
     const updatedTurrets = { ...turrets };
     
-    // Process EMP drones and Medics
     for (const enemy of enemies) {
       if (enemy.canDisableTurrets) {
         Object.values(updatedTurrets).forEach((t: any) => {
@@ -293,13 +282,12 @@ export function useGameEngine() {
       
       const dist = (e: Enemy) => Math.sqrt(Math.pow(e.x - turret.x, 2) + Math.pow(e.y - turret.y, 2));
 
-      // Find targets in range
       let target = enemies.find(e => e.id === turret.targetId);
       
       const isValidTarget = (e: Enemy) => {
         if (e.isFlying && !turretConfig.targetsAir) return false;
         if (!e.isFlying && !turretConfig.targetsGround) return false;
-        if (e.isStealth && dist(e) > turret.range * 0.5) return false; // Stealth units visible only at half range
+        if (e.isStealth && dist(e) > turret.range * 0.5) return false;
         return true;
       };
 
@@ -307,11 +295,9 @@ export function useGameEngine() {
         const validTargets = enemies.filter(e => isValidTarget(e) && dist(e) <= turret.range);
         if (validTargets.length > 0) {
           validTargets.sort((a, b) => {
-            // Prioritize enemies closer to the base (higher progress)
             if (Math.abs(b.progress - a.progress) > 0.05) {
                return b.progress - a.progress;
             }
-            // Tie-breaker: higher HP enemies
             return b.hp - a.hp;
           });
           target = validTargets[0];
@@ -326,11 +312,9 @@ export function useGameEngine() {
           return;
         }
 
-        // Check fire rate
         const timeSinceLastFire = time - turret.lastFired;
         const cooldownMs = 1000 / turret.fireRate;
         if (timeSinceLastFire >= cooldownMs) {
-          // Fire projectile
           newProjectiles.push({
             id: Math.random().toString(36).substr(2, 9),
             towerType: turret.type,
@@ -339,7 +323,7 @@ export function useGameEngine() {
             targetX: target.x,
             targetY: target.y,
             targetId: target.id,
-            speed: turret.type === 'missile' ? 300 : 800, // pixels per sec
+            speed: turret.type === 'missile' ? 300 : 800,
             damage: turret.damage
           });
           turret.lastFired = time;
@@ -347,7 +331,6 @@ export function useGameEngine() {
       }
     });
 
-    // 4. Move projectiles and apply damage
     let finalProjectiles = [];
     for (const proj of newProjectiles) {
       const target = enemies.find(e => e.id === proj.targetId);
@@ -355,7 +338,6 @@ export function useGameEngine() {
       let tx = proj.targetX;
       let ty = proj.targetY;
 
-      // Homing projectiles
       if (target) {
         tx = target.x;
         ty = target.y;
@@ -368,13 +350,12 @@ export function useGameEngine() {
       const moveDist = proj.speed * deltaTime;
 
       if (moveDist >= distance) {
-        // Hit
         if (target) {
           let damageToApply = proj.damage;
           const projTowerConfig = TOWER_CONFIGS[proj.towerType];
           
           if (target.isArmored && projTowerConfig && !projTowerConfig.armorPiercing) {
-            damageToApply *= 0.3; // 70% reduction
+            damageToApply *= 0.3;
           }
           
           target.hp -= damageToApply;
@@ -394,11 +375,9 @@ export function useGameEngine() {
       }
     }
     
-    // Cleanup old airstrikes
     const now = Date.now();
     const activeAirstrikes = state.activeAirstrikes.filter(a => now - a.startTime < 4000);
 
-    // Sync React State
     setGameState({
       ...state,
       money,
@@ -422,26 +401,16 @@ export function useGameEngine() {
 
   const callAirstrike = useCallback(() => {
     setGameState(prev => {
-      // Must be playing, wave >= 5, and cooldown of 20s must have passed
       if (prev.status !== 'playing') return prev;
       if (prev.wave < 5) return prev;
       if (Date.now() - prev.lastAirstrikeTime < 20000) return prev;
 
-      // Deal massive damage to all enemies
-      const newEnemies = prev.enemies.map(e => ({
-        ...e,
-        hp: e.hp - 1000 // 1000 damage
-      })).filter(e => e.hp > 0);
-
-      // We actually want the enemies to explode. If they die, we gain money.
       let moneyGained = 0;
       prev.enemies.forEach(e => {
         if (e.hp - 1000 <= 0 && !e.isBoss) {
-            // Boss takes damage, but others die and give reward
             moneyGained += e.reward;
         }
       });
-      // Keep bosses if they survived
       const survivingEnemies = prev.enemies.map(e => ({
           ...e,
           hp: e.hp - 1000
