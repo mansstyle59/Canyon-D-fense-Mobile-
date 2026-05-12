@@ -18,7 +18,7 @@
 
 ## Jouer
 
-**[mansstyle59.github.io/Canyon-D-fense-Mobile-](https://mansstyle59.github.io/Canyon-D-fense-Mobile-)** — aucune installation requise, directement dans le navigateur.
+**[mansstyle59.github.io/Canyon-D-fense-Mobile-/](https://mansstyle59.github.io/Canyon-D-fense-Mobile-/)** — aucune installation requise, directement dans le navigateur.
 
 ---
 

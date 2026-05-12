@@ -20,21 +20,21 @@ export const GameBoard = ({
   setSelectedTurretId: (id: string | null) => void
 }) => {
     const TURRET_SLOTS = [
-      { id: '1', x: 60, y: 50 },
-      { id: '2', x: 340, y: 50 },
-      { id: '3', x: 550, y: 60 },
-      { id: '4', x: 780, y: 50 },
-      { id: '5', x: 960, y: 220 },
-      { id: '6', x: 960, y: 380 },
-      { id: '7', x: 720, y: 260 },
-      { id: '8', x: 580, y: 300 },
-      { id: '9', x: 420, y: 260 },
-      { id: '10', x: 280, y: 160 },
-      { id: '11', x: 80, y: 280 },
-      { id: '12', x: 120, y: 380 },
-      { id: '13', x: 320, y: 380 },
-      { id: '14', x: 520, y: 580 },
-      { id: '15', x: 700, y: 560 },
+      { id: '1',  x: 50,  y: 50  },
+      { id: '2',  x: 200, y: 42  },
+      { id: '3',  x: 370, y: 50  },
+      { id: '4',  x: 375, y: 200 },
+      { id: '5',  x: 360, y: 315 },
+      { id: '6',  x: 205, y: 205 },
+      { id: '7',  x: 80,  y: 265 },
+      { id: '8',  x: 50,  y: 380 },
+      { id: '9',  x: 250, y: 390 },
+      { id: '10', x: 80,  y: 480 },
+      { id: '11', x: 255, y: 495 },
+      { id: '12', x: 365, y: 490 },
+      { id: '13', x: 365, y: 600 },
+      { id: '14', x: 190, y: 655 },
+      { id: '15', x: 50,  y: 695 },
     ];
 
     const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
@@ -44,8 +44,8 @@ export const GameBoard = ({
             
             {/* SVG Interactive Ground Layer */}
             <svg 
-              className="w-full h-full max-w-full max-h-full pointer-events-none relative z-10" 
-              viewBox="0 0 1024 608"
+              className="w-full h-full max-w-full max-h-full pointer-events-none relative z-10"
+              viewBox="0 0 420 780"
               preserveAspectRatio="xMidYMid meet"
             >
               {/* Definitions for glows */}
@@ -67,8 +67,8 @@ export const GameBoard = ({
                   <feDropShadow dx="5" dy="8" stdDeviation="4" floodColor="#000000" floodOpacity="0.7"/>
                 </filter>
                 
-                <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-                  <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(249, 115, 22, 0.05)" strokeWidth="1" />
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(249, 115, 22, 0.05)" strokeWidth="1" />
                 </pattern>
                 
                 {/* Camouflage Patterns for Units */}
@@ -103,15 +103,14 @@ export const GameBoard = ({
                   <stop offset="100%" stopColor="#1e293b" />
                 </linearGradient>
                 {/* Topographical Line Patterns */}
-                <path id="topo1" d="M -100 200 Q 150 150 400 300 T 800 100 T 1100 400" fill="none" stroke="rgba(249, 115, 22, 0.1)" strokeWidth="1.5" />
-                <path id="topo2" d="M -100 250 Q 150 200 400 350 T 800 150 T 1100 450" fill="none" stroke="rgba(249, 115, 22, 0.08)" strokeWidth="1" />
-                <path id="topo3" d="M -100 300 Q 150 250 400 400 T 800 200 T 1100 500" fill="none" stroke="rgba(249, 115, 22, 0.06)" strokeWidth="0.5" />
-                
-                <path id="topo4" d="M -100 450 Q 200 600 500 500 T 1100 700" fill="none" stroke="rgba(249, 115, 22, 0.1)" strokeWidth="1.5" />
-                <path id="topo5" d="M -100 500 Q 200 650 500 550 T 1100 750" fill="none" stroke="rgba(249, 115, 22, 0.08)" strokeWidth="1" />
+                <path id="topo1" d="M -50 180 Q 100 140 250 220 T 450 160" fill="none" stroke="rgba(249, 115, 22, 0.1)" strokeWidth="1.5" />
+                <path id="topo2" d="M -50 230 Q 100 190 250 270 T 450 210" fill="none" stroke="rgba(249, 115, 22, 0.07)" strokeWidth="1" />
+                <path id="topo3" d="M -50 480 Q 120 440 260 510 T 450 460" fill="none" stroke="rgba(249, 115, 22, 0.08)" strokeWidth="1" />
+                <path id="topo4" d="M -50 600 Q 130 560 280 620 T 450 580" fill="none" stroke="rgba(249, 115, 22, 0.1)" strokeWidth="1.5" />
+                <path id="topo5" d="M -50 650 Q 130 610 280 670 T 450 630" fill="none" stroke="rgba(249, 115, 22, 0.07)" strokeWidth="1" />
               </defs>
 
-              <rect x="0" y="0" width="1024" height="608" fill="url(#grid)" />
+              <rect x="0" y="0" width="420" height="780" fill="url(#grid)" />
               
               <use href="#topo1" />
               <use href="#topo2" />
@@ -121,113 +120,81 @@ export const GameBoard = ({
 
               <g filter="url(#groundShadow)">
                 {/* Sand Border Base */}
-                <path d="M -50 120 C 200 120 250 80 450 150 S 850 200 850 350 S 650 500 450 450 S 150 580 -50 500" 
-                      stroke="#b28d57" strokeWidth="94" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+                <path d="M -20 120 C 90 65 250 65 370 135 C 405 195 405 275 340 315 C 270 355 130 370 110 428 C 90 486 225 542 360 567 C 400 585 235 658 -20 682"
+                      stroke="#b28d57" strokeWidth="58" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
                 {/* Sand Road */}
-                <path d="M -50 120 C 200 120 250 80 450 150 S 850 200 850 350 S 650 500 450 450 S 150 580 -50 500" 
-                      stroke="#d4ac75" strokeWidth="80" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="1" />
+                <path d="M -20 120 C 90 65 250 65 370 135 C 405 195 405 275 340 315 C 270 355 130 370 110 428 C 90 486 225 542 360 567 C 400 585 235 658 -20 682"
+                      stroke="#d4ac75" strokeWidth="46" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="1" />
                 {/* Dirt Tracks */}
-                <path d="M -50 120 C 200 120 250 80 450 150 S 850 200 850 350 S 650 500 450 450 S 150 580 -50 500" 
-                      stroke="#c09861" strokeWidth="20" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
+                <path d="M -20 120 C 90 65 250 65 370 135 C 405 195 405 275 340 315 C 270 355 130 370 110 428 C 90 486 225 542 360 567 C 400 585 235 658 -20 682"
+                      stroke="#c09861" strokeWidth="12" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
               </g>
 
               {/* Army Base Camps & Decor */}
               <g filter="url(#blackShadow)">
-                {/* Base Camp 1 (Near start) */}
-                <g transform="translate(180, 250) rotate(-15)">
-                  {/* Tent 1 */}
+                {/* Base Camp 1 (left side, mid-height) */}
+                <g transform="translate(100, 265) rotate(-12)">
                   <g transform="translate(0, 0)">
-                    <rect x="-20" y="-15" width="40" height="30" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-20" y1="0" x2="20" y2="0" stroke="#2b3011" strokeWidth="2" />
+                    <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
+                    <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
                     <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
-                    <path d="M -10 -8 Q 0 -2 -5 5 T -10 10" fill="#3a4018" opacity="0.6"/>
-                    <path d="M 5 10 Q 8 2 12 -5" fill="#3a4018" opacity="0.5"/>
                   </g>
-                  {/* Tent 2 */}
-                  <g transform="translate(50, 10)">
-                    <rect x="-20" y="-15" width="40" height="30" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-20" y1="0" x2="20" y2="0" stroke="#2b3011" strokeWidth="2" />
+                  <g transform="translate(38, 7)">
+                    <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
+                    <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
                     <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
-                    <path d="M -12 8 Q -3 2 -8 -5 T -12 -12" fill="#3a4018" opacity="0.6"/>
                   </g>
                 </g>
                 
-                {/* Checkpoint Barricade */}
-                <g transform="translate(480, 80) rotate(5)">
-                  <rect x="-2" y="-30" width="4" height="60" fill="#64748b" />
-                  <line x1="-2" y1="-30" x2="25" y2="0" stroke="#111" strokeWidth="1.5" />
-                  <rect x="22" y="-4" width="6" height="8" fill="#475569" stroke="#111" />
-                  {/* Sandbags */}
-                  <path d="M -10 -40 Q -5 -45 0 -40 Q 5 -45 10 -40 Q 15 -45 20 -40 L 20 -30 L -10 -30 Z" fill="#d4d4d8" stroke="#71717a" strokeWidth="1" />
-                  <circle cx="5" cy="-35" r="4" fill="#3f3f46" />
+                {/* Checkpoint Barricade (center upper) */}
+                <g transform="translate(200, 188) rotate(5)">
+                  <rect x="-2" y="-25" width="4" height="50" fill="#64748b" />
+                  <line x1="-2" y1="-25" x2="20" y2="0" stroke="#111" strokeWidth="1.5" />
+                  <rect x="18" y="-4" width="5" height="8" fill="#475569" stroke="#111" />
+                  <path d="M -8 -32 Q -4 -36 0 -32 Q 4 -36 8 -32 Q 12 -36 16 -32 L 16 -25 L -8 -25 Z" fill="#d4d4d8" stroke="#71717a" strokeWidth="1" />
+                  <circle cx="4" cy="-29" r="3" fill="#3f3f46" />
                 </g>
 
-                {/* Base Camp 2 (Top right) */}
-                <g transform="translate(680, 90) rotate(30)">
+                {/* Base Camp 2 (top right corner) */}
+                <g transform="translate(352, 62) rotate(15)">
                   <g transform="translate(0, 0)">
-                    <rect x="-20" y="-15" width="40" height="30" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-20" y1="0" x2="20" y2="0" stroke="#2b3011" strokeWidth="2" />
+                    <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
+                    <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
                     <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
                   </g>
-                  <g transform="translate(-45, -20)">
-                    <rect x="-20" y="-15" width="40" height="30" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-20" y1="0" x2="20" y2="0" stroke="#2b3011" strokeWidth="2" />
-                    <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
- wave                  </g>
-                  <g transform="translate(0, -50)">
-                    <rect x="-20" y="-15" width="40" height="30" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-20" y1="0" x2="20" y2="0" stroke="#2b3011" strokeWidth="2" />
+                  <g transform="translate(-36, -16)">
+                    <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
+                    <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
                     <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
                   </g>
                 </g>
 
-                {/* Base Camp 3 (Top Left) */}
-                <g transform="translate(140, 50) rotate(5)">
-                  <g transform="translate(0, 0)">
-                    <rect x="-20" y="-15" width="40" height="30" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-20" y1="0" x2="20" y2="0" stroke="#2b3011" strokeWidth="2" />
-                    <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
+                {/* Airfield (bottom) */}
+                <g transform="translate(290, 716)">
+                  <rect x="-28" y="-18" width="56" height="36" fill="#3e451b" rx="4" stroke="#2b3011" strokeWidth="2"/>
+                  <line x1="-28" y1="-8" x2="28" y2="-8" stroke="#2b3011" strokeWidth="2" />
+                  <line x1="-28" y1="8" x2="28" y2="8" stroke="#2b3011" strokeWidth="2" />
+                  <g transform="translate(-42, 26) rotate(-20)">
+                    <path d="M-16,-3 L20,0 L-16,3 Z" fill="#64748b" stroke="#111" strokeWidth="1" />
+                    <path d="M-4,-16 L8,0 L-4,16 Z" fill="#475569" stroke="#111" strokeWidth="1" />
+                    <circle cx="8" cy="0" r="2.5" fill="#0ea5e9" stroke="#111" strokeWidth="1" />
                   </g>
-                  {/* Parked Vehicles */}
-                  <g transform="translate(50, -10) rotate(-10)">
-                    <rect x="-15" y="-8" width="30" height="16" rx="2" fill="#324a38" stroke="#111" />
-                    <rect x="-8" y="-6" width="20" height="12" fill="#223326" />
-                  </g>
-                  <g transform="translate(90, 0) rotate(-5)">
-                    <rect x="-15" y="-8" width="30" height="16" rx="2" fill="#324a38" stroke="#111" />
-                    <rect x="-8" y="-6" width="20" height="12" fill="#223326" />
-                  </g>
-                </g>
-
-                {/* Base Camp 4 (Bottom Right Airfield) */}
-                <g transform="translate(860, 500)">
-                  <g transform="translate(0, -40)">
-                    <rect x="-30" y="-20" width="60" height="40" fill="#3e451b" rx="4" stroke="#2b3011" strokeWidth="2"/>
-                    <line x1="-30" y1="-10" x2="30" y2="-10" stroke="#2b3011" strokeWidth="2" />
-                    <line x1="-30" y1="10" x2="30" y2="10" stroke="#2b3011" strokeWidth="2" />
-                  </g>
-                  {/* Grounded Planes */}
-                  <g transform="translate(-60, 40) rotate(-15)">
-                    <path d="M-20,-4 L25,0 L-20,4 Z" fill="#64748b" stroke="#111" strokeWidth="1" />
-                    <path d="M-5,-20 L10,0 L-5,20 Z" fill="#475569" stroke="#111" strokeWidth="1" />
-                    <circle cx="10" cy="0" r="3" fill="#0ea5e9" stroke="#111" strokeWidth="1" />
-                  </g>
-                  <g transform="translate(30, 60) rotate(-40)">
-                    <path d="M-20,-4 L25,0 L-20,4 Z" fill="#64748b" stroke="#111" strokeWidth="1" />
-                    <path d="M-5,-20 L10,0 L-5,20 Z" fill="#475569" stroke="#111" strokeWidth="1" />
-                    <circle cx="10" cy="0" r="3" fill="#0ea5e9" stroke="#111" strokeWidth="1" />
+                  <g transform="translate(22, 44) rotate(-35)">
+                    <path d="M-16,-3 L20,0 L-16,3 Z" fill="#64748b" stroke="#111" strokeWidth="1" />
+                    <path d="M-4,-16 L8,0 L-4,16 Z" fill="#475569" stroke="#111" strokeWidth="1" />
+                    <circle cx="8" cy="0" r="2.5" fill="#0ea5e9" stroke="#111" strokeWidth="1" />
                   </g>
                 </g>
               </g>
 
               {/* Glowing Entry / Exit Portals */}
-              <circle cx="0" cy="120" r="40" fill="#f97316" opacity="0.05" filter="url(#neonGlow)" />
-              <line x1="0" y1="70" x2="0" y2="170" stroke="#f97316" strokeWidth="4" filter="url(#neonGlow)" />
-              <line x1="-15" y1="70" x2="-15" y2="170" stroke="#f97316" strokeWidth="2" opacity="0.4" />
-              
-              <circle cx="0" cy="500" r="40" fill="#f97316" opacity="0.05" filter="url(#neonGlow)" />
-              <line x1="0" y1="450" x2="0" y2="550" stroke="#f97316" strokeWidth="4" filter="url(#neonGlow)" />
-              <line x1="-15" y1="450" x2="-15" y2="550" stroke="#f97316" strokeWidth="2" opacity="0.4" />
+              <circle cx="0" cy="120" r="30" fill="#f97316" opacity="0.05" filter="url(#neonGlow)" />
+              <line x1="0" y1="90" x2="0" y2="150" stroke="#f97316" strokeWidth="4" filter="url(#neonGlow)" />
+              <line x1="-12" y1="90" x2="-12" y2="150" stroke="#f97316" strokeWidth="2" opacity="0.4" />
+
+              <circle cx="0" cy="682" r="30" fill="#f97316" opacity="0.05" filter="url(#neonGlow)" />
+              <line x1="0" y1="652" x2="0" y2="712" stroke="#f97316" strokeWidth="4" filter="url(#neonGlow)" />
+              <line x1="-12" y1="652" x2="-12" y2="712" stroke="#f97316" strokeWidth="2" opacity="0.4" />
 
               {/* Render Enemies */}
               {gameState.enemies.map(enemy => (
@@ -253,15 +220,24 @@ export const GameBoard = ({
                       transition={{ duration: 0.5, repeat: Infinity }}
                       filter="url(#unitShadow)"
                     >
+                      {/* Detailed Jeep Body with camo */}
                       <rect x="-16" y="-12" width="32" height="24" rx="4" fill="url(#camoJungle)" stroke="#111" strokeWidth="1" />
+                      {/* Inner darker section */}
                       <rect x="-12" y="-10" width="24" height="20" rx="3" fill="url(#camoDesert)" opacity="0.6" stroke="#111" strokeWidth="0.5" />
+                      
+                      {/* Windshield */}
                       <rect x="0" y="-8" width="8" height="16" fill="url(#glass)" stroke="#fff" strokeWidth="0.5" opacity="0.8" />
+                      
+                      {/* Wheels */}
                       <rect x="-12" y="-16" width="10" height="6" rx="2" fill="#111" stroke="#000" strokeWidth="1" />
                       <rect x="-12" y="10" width="10" height="6" rx="2" fill="#111" stroke="#000" strokeWidth="1" />
                       <rect x="6" y="-16" width="8" height="6" rx="2" fill="#111" stroke="#000" strokeWidth="1" />
                       <rect x="6" y="10" width="8" height="6" rx="2" fill="#111" stroke="#000" strokeWidth="1" />
+
+                      {/* Headlights */}
                       <circle cx="16" cy="-8" r="2" fill="#ffedd5" filter="url(#neonGlow)" />
                       <circle cx="16" cy="8" r="2" fill="#ffedd5" filter="url(#neonGlow)" />
+                      {/* Light beams */}
                       <polygon points="17,-8 40,-16 40,0" fill="#fff" opacity="0.1" />
                       <polygon points="17,8 40,0 40,16" fill="#fff" opacity="0.1" />
                     </motion.g>
@@ -269,15 +245,24 @@ export const GameBoard = ({
 
                   {enemy.type === 'tank' && (
                     <g filter="url(#unitShadow)">
+                      {/* Treads */}
                       <rect x="-22" y="-18" width="44" height="10" rx="2" fill="url(#metal)" stroke="#000" strokeWidth="1" />
                       <rect x="-22" y="8" width="44" height="10" rx="2" fill="url(#metal)" stroke="#000" strokeWidth="1" />
+                      
+                      {/* Main Body */}
                       <path d="M -16 -12 L 14 -12 L 20 -4 L 20 4 L 14 12 L -16 12 Z" fill="url(#camoDesert)" stroke="#1c291f" strokeWidth="1.5" />
+                      
+                      {/* Engine Details */}
                       <rect x="-14" y="-8" width="8" height="16" fill="#1a2e21" stroke="#111" strokeWidth="0.5" />
                       <line x1="-12" y1="-6" x2="-12" y2="6" stroke="#000" strokeWidth="1" />
                       <line x1="-10" y1="-6" x2="-10" y2="6" stroke="#000" strokeWidth="1" />
                       <line x1="-8" y1="-6" x2="-8" y2="6" stroke="#000" strokeWidth="1" />
+
+                      {/* Turret Base */}
                       <circle cx="2" cy="0" r="12" fill="url(#camoJungle)" stroke="#000" strokeWidth="1.5" />
                       <circle cx="2" cy="0" r="6" fill="#111" opacity="0.8" />
+
+                      {/* Cannon */}
                       <rect x="8" y="-3" width="28" height="6" fill="url(#metal)" stroke="#000" strokeWidth="1" />
                       <rect x="34" y="-4" width="6" height="8" fill="#111" />
                       <line x1="8" y1="0" x2="34" y2="0" stroke="#fff" strokeWidth="0.5" opacity="0.3" />
@@ -286,16 +271,24 @@ export const GameBoard = ({
 
                   {enemy.type === 'apc' && (
                     <g filter="url(#unitShadow)">
+                      {/* Wheels - 6 wheeled */}
                       <rect x="-16" y="-14" width="8" height="6" rx="2" fill="#111" stroke="#000" />
                       <rect x="0" y="-14" width="8" height="6" rx="2" fill="#111" stroke="#000" />
                       <rect x="16" y="-14" width="8" height="6" rx="2" fill="#111" stroke="#000" />
+                      
                       <rect x="-16" y="8" width="8" height="6" rx="2" fill="#111" stroke="#000" />
                       <rect x="0" y="8" width="8" height="6" rx="2" fill="#111" stroke="#000" />
                       <rect x="16" y="8" width="8" height="6" rx="2" fill="#111" stroke="#000" />
+
+                      {/* Armored Body */}
                       <path d="M -22 -10 L 22 -10 L 26 -4 L 26 4 L 22 10 L -22 10 Z" fill="url(#camoUrban)" stroke="#111" strokeWidth="1.5" />
+                      
+                      {/* Hatches and Details */}
                       <rect x="-14" y="-6" width="20" height="12" fill="url(#metal)" opacity="0.8" stroke="#111" strokeWidth="0.5" />
                       <circle cx="-4" cy="0" r="4" fill="#111" stroke="#333" />
                       <circle cx="8" cy="0" r="4" fill="#111" stroke="#333" />
+                      
+                      {/* Turret */}
                       <circle cx="16" cy="0" r="5" fill="#222" stroke="#111" strokeWidth="1" />
                       <rect x="16" y="-1" width="12" height="2" fill="url(#metal)" stroke="#000" strokeWidth="0.5" />
                     </g>
@@ -303,16 +296,19 @@ export const GameBoard = ({
 
                   {enemy.type === 'squad' && (
                     <g filter="url(#blackShadow)">
+                      {/* Solider 1 */}
                       <g transform="translate(6, 6)">
                         <circle cx="0" cy="0" r="4.5" fill="url(#camoJungle)" stroke="#111" strokeWidth="1" />
                         <rect x="2" y="-1" width="12" height="2" fill="#111" />
                         <circle cx="1" cy="0" r="2.5" fill="#000" />
                       </g>
+                      {/* Solider 2 */}
                       <g transform="translate(-5, -5)">
                         <circle cx="0" cy="0" r="4.5" fill="url(#camoJungle)" stroke="#111" strokeWidth="1" />
                         <rect x="2" y="-1" width="10" height="2" fill="#111" />
                         <circle cx="1" cy="0" r="2.5" fill="#000" />
                       </g>
+                      {/* Solider 3 */}
                       <g transform="translate(-8, 8)">
                         <circle cx="0" cy="0" r="4.5" fill="url(#camoJungle)" stroke="#111" strokeWidth="1" />
                         <rect x="2" y="-1" width="10" height="2" fill="#111" />
@@ -328,15 +324,24 @@ export const GameBoard = ({
                       transition={{ duration: 0.3, repeat: Infinity }}
                       filter="url(#unitShadow)"
                     >
+                      {/* Big Wheels */}
                       <rect x="-10" y="-10" width="10" height="5" rx="2" fill="#111" stroke="#000" />
                       <rect x="8" y="-10" width="10" height="5" rx="2" fill="#111" stroke="#000" />
                       <rect x="-10" y="5" width="10" height="5" rx="2" fill="#111" stroke="#000" />
                       <rect x="8" y="5" width="10" height="5" rx="2" fill="#111" stroke="#000" />
+
+                      {/* Frame */}
                       <path d="M -12 -5 L 12 -4 L 14 0 L 12 4 L -12 5 Z" fill="#b45309" stroke="#111" strokeWidth="1" />
+                      
+                      {/* Roll Cage */}
                       <path d="M -6 -4 L 6 -4 L 6 4 L -6 4 Z" fill="none" stroke="#e2e8f0" strokeWidth="1.5" />
                       <line x1="-6" y1="-4" x2="6" y2="4" stroke="#e2e8f0" strokeWidth="1" />
                       <line x1="-6" y1="4" x2="6" y2="-4" stroke="#e2e8f0" strokeWidth="1" />
+
+                      {/* Engine */}
                       <rect x="-14" y="-3" width="4" height="6" fill="url(#metal)" stroke="#111" />
+                      
+                      {/* Driver */}
                       <circle cx="0" cy="0" r="3" fill="#111" />
                       <circle cx="0" cy="0" r="1.5" fill="#ef4444" />
                     </motion.g>
@@ -344,16 +349,26 @@ export const GameBoard = ({
 
                   {enemy.type === 'heavy_tank' && (
                     <g filter="url(#unitShadow)">
+                      {/* Quad Treads */}
                       <rect x="-26" y="-22" width="52" height="12" rx="3" fill="url(#metal)" stroke="#111" strokeWidth="1.5" />
                       <rect x="-26" y="10" width="52" height="12" rx="3" fill="url(#metal)" stroke="#111" strokeWidth="1.5" />
                       <rect x="-18" y="-23" width="36" height="46" fill="#111" />
+
+                      {/* Main Chassis */}
                       <path d="M -22 -16 L 20 -16 L 30 -8 L 30 8 L 20 16 L -22 16 Z" fill="url(#camoDesert)" stroke="#111" strokeWidth="2" />
+                      {/* Details & Panels */}
                       <rect x="-16" y="-10" width="12" height="20" fill="url(#metal)" opacity="0.6" stroke="#111" />
                       <rect x="-2" y="-10" width="18" height="20" fill="url(#camoUrban)" rx="2" stroke="#111" />
+
+                      {/* Massive Turret */}
                       <circle cx="4" cy="0" r="18" fill="url(#camoJungle)" stroke="#111" strokeWidth="2" />
                       <circle cx="4" cy="0" r="10" fill="#111" opacity="0.7" />
+                      
+                      {/* Dual Cannons */}
                       <rect x="20" y="-7" width="36" height="5" fill="url(#metal)" stroke="#111" strokeWidth="1" />
                       <rect x="20" y="2" width="36" height="5" fill="url(#metal)" stroke="#111" strokeWidth="1" />
+                      
+                      {/* Muzzles */}
                       <rect x="52" y="-8" width="8" height="7" fill="#111" />
                       <rect x="52" y="1" width="8" height="7" fill="#111" />
                     </g>
@@ -369,6 +384,7 @@ export const GameBoard = ({
                       <path d="M -10 0 L 0 -10 L 10 0 L 0 10 Z" fill="url(#metal)" stroke="#818cf8" strokeWidth="1.5" />
                       <circle cx="0" cy="0" r="5" fill="#1e293b" />
                       <circle cx="0" cy="0" r="2" fill="#fff" filter="url(#neonGlow)" />
+                      {/* Rotors */}
                       <circle cx="-10" cy="-10" r="4" fill="none" stroke="#fff" strokeWidth="1" opacity="0.5" />
                       <circle cx="10" cy="-10" r="4" fill="none" stroke="#fff" strokeWidth="1" opacity="0.5" />
                       <circle cx="-10" cy="10" r="4" fill="none" stroke="#fff" strokeWidth="1" opacity="0.5" />
@@ -383,10 +399,13 @@ export const GameBoard = ({
                       transition={{ duration: 1.5, repeat: Infinity }}
                       filter="url(#unitShadow)"
                     >
+                      {/* Jet fighter shape */}
                       <path d="M -15 -14 L -5 0 L -15 14 Z" fill="url(#metal)" stroke="#111" strokeWidth="0.5" />
                       <path d="M -10 -25 L 8 0 L -10 25 Z" fill="url(#camoUrban)" stroke="#111" strokeWidth="1" />
                       <path d="M -5 -5 L 24 0 L -5 5 Z" fill="url(#metal)" stroke="#111" strokeWidth="0.5" />
+                      {/* Cockpit */}
                       <ellipse cx="6" cy="0" rx="6" ry="2" fill="url(#glass)" />
+                      {/* Engine Exhaust */}
                       <circle cx="-12" cy="-8" r="2" fill="#ef4444" filter="url(#neonGlow)" />
                       <circle cx="-12" cy="8" r="2" fill="#ef4444" filter="url(#neonGlow)" />
                       <polygon points="-14,-8 -24,-10 -24,-6" fill="#f97316" opacity="0.8" filter="url(#neonGlow)" />
@@ -401,10 +420,14 @@ export const GameBoard = ({
                       transition={{ duration: 1.5, repeat: Infinity }}
                       filter="url(#unitShadow)"
                     >
+                      {/* Body */}
                       <path d="M -14 -6 L 18 -5 L 24 0 L 18 5 L -14 6 Z" fill="#0f172a" stroke="#000" strokeWidth="1.5" />
+                      {/* Cockpit */}
                       <path d="M 8 -3 L 18 -2 L 18 2 L 8 3 Z" fill="url(#glass)" opacity="0.8" />
+                      {/* Tail */}
                       <rect x="-28" y="-1.5" width="14" height="3" fill="#1e293b" />
                       <path d="M -28 -6 L -24 -1.5 L -28 3 Z" fill="#0f172a" stroke="#000" strokeWidth="0.5" />
+                      {/* Rotors */}
                       <motion.g animate={{ rotate: 360 }} transition={{ duration: 0.15, repeat: Infinity, ease: "linear" }}>
                          <circle cx="0" cy="0" r="20" fill="#fff" opacity="0.1" />
                          <path d="M -20 -2 L 20 -2 L 20 2 L -20 2 Z" fill="#fff" opacity="0.3" filter="url(#neonGlow)" />
@@ -421,10 +444,14 @@ export const GameBoard = ({
                       transition={{ duration: 2, repeat: Infinity }}
                       filter="url(#unitShadow)"
                     >
+                      {/* Fuselage */}
                       <polygon points="-24,-6 24,0 -24,6" fill="#1e293b" stroke="#111" strokeWidth="1.5" />
+                      {/* Enormous wings */}
                       <polygon points="-5,0 -15,-30 8,0 -15,30" fill="url(#camoJungle)" stroke="#111" strokeWidth="1.5" />
+                      {/* Cockpit */}
                       <ellipse cx="12" cy="0" rx="4" ry="2" fill="url(#glass)" />
                       <circle cx="12" cy="0" r="2" fill="#ef4444" opacity="0.5" filter="url(#neonGlow)" />
+                      {/* Jet trails */}
                       <line x1="-15" y1="-15" x2="-35" y2="-15" stroke="#fff" opacity="0.3" strokeWidth="2" />
                       <line x1="-15" y1="15" x2="-35" y2="15" stroke="#fff" opacity="0.3" strokeWidth="2" />
                     </motion.g>
@@ -437,6 +464,7 @@ export const GameBoard = ({
                       <circle cx="-6" cy="0" r="3.5" fill="#111" stroke="#333" strokeWidth="1" />
                       <circle cx="6" cy="0" r="3.5" fill="#111" stroke="#333" strokeWidth="1" />
                       <path d="M -2 -2 L 4 -2 L 2 -4 Z" fill="#10b981" />
+                      {/* Headlight */}
                       <circle cx="8" cy="0" r="1.5" fill="#fde047" filter="url(#neonGlow)" />
                       <polygon points="9,-4 25,-12 25,12 9,4" fill="#fef08a" opacity="0.2" />
                       <circle cx="-2" cy="0" r="2" fill="#111" />
@@ -445,16 +473,23 @@ export const GameBoard = ({
 
                   {enemy.type === 'medic_truck' && (
                     <g filter="url(#unitShadow)">
+                      {/* Wheels */}
                       <rect x="-14" y="-10" width="8" height="4" rx="1" fill="#111" />
                       <rect x="8" y="-10" width="8" height="4" rx="1" fill="#111" />
                       <rect x="-14" y="6" width="8" height="4" rx="1" fill="#111" />
                       <rect x="8" y="6" width="8" height="4" rx="1" fill="#111" />
+                      
+                      {/* Body */}
                       <rect x="-16" y="-8" width="32" height="16" rx="3" fill="#f8fafc" stroke="#64748b" strokeWidth="1.5" />
+                      {/* Cab */}
                       <rect x="8" y="-6" width="6" height="12" fill="#cbd5e1" stroke="#64748b" strokeWidth="1" />
                       <rect x="10" y="-4" width="3" height="8" fill="url(#glass)" />
+                      
+                      {/* Red cross on top */}
                       <circle cx="-4" cy="0" r="5" fill="#fff" stroke="#e2e8f0" />
                       <rect x="-5.5" y="-3" width="3" height="6" fill="#ef4444" />
                       <rect x="-7" y="-1.5" width="6" height="3" fill="#ef4444" />
+                      
                       <circle cx="-4" cy="0" r="20" fill="#22c55e" opacity="0.1" className="animate-ping" />
                     </g>
                   )}
@@ -466,6 +501,7 @@ export const GameBoard = ({
                       transition={{ duration: 0.8, repeat: Infinity }}
                       filter="url(#unitShadow)"
                     >
+                      {/* Boss warning aura */}
                       <motion.circle
                         cx="0" cy="0" r="50"
                         fill="none"
@@ -475,16 +511,27 @@ export const GameBoard = ({
                         transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
                       />
                       <circle cx="0" cy="0" r="40" fill="#ef4444" fillOpacity="0.06" />
+                      {/* Mech Legs */}
                       <path d="M 0 0 L -8 -12 L -14 -12" fill="none" stroke="url(#metal)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
                       <path d="M 0 0 L -8 12 L -14 12" fill="none" stroke="url(#metal)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
                       <path d="M 0 0 L 10 -12 L 16 -12" fill="none" stroke="url(#camoUrban)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
                       <path d="M 0 0 L 10 12 L 16 12" fill="none" stroke="url(#camoUrban)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+                      
+                      {/* Mech Torso */}
                       <rect x="-14" y="-14" width="28" height="28" rx="4" fill="url(#camoUrban)" stroke="#111" strokeWidth="2" />
+                      
+                      {/* Reactor Core */}
                       <circle cx="0" cy="0" r="8" fill="#1e293b" />
                       <circle cx="0" cy="0" r="4" fill="#0ea5e9" filter="url(#neonGlow)" className="animate-pulse" />
+                      
+                      {/* Cockpit */}
                       <rect x="8" y="-6" width="8" height="12" rx="2" fill="url(#glass)" stroke="#111" />
+                      
+                      {/* Heavy Cannons */}
                       <rect x="14" y="-18" width="20" height="6" fill="url(#metal)" stroke="#111" strokeWidth="1" />
                       <rect x="14" y="12" width="20" height="6" fill="url(#metal)" stroke="#111" strokeWidth="1" />
+                      
+                      {/* Laser sights */}
                       <line x1="34" y1="-15" x2="60" y2="-15" stroke="#ef4444" strokeWidth="0.5" opacity="0.6" />
                       <line x1="34" y1="15" x2="60" y2="15" stroke="#ef4444" strokeWidth="0.5" opacity="0.6" />
                     </motion.g>
@@ -633,13 +680,19 @@ export const GameBoard = ({
                   animate={{ x: 1200 }}
                   transition={{ duration: 3.5, ease: "linear" }}
                 >
+                  {/* Bomber 1 */}
                   <g transform="translate(0, 100) scale(1.5)" style={{ filter: 'drop-shadow(0px 40px 20px rgba(0,0,0,0.6))' }}>
+                     {/* Fuselage */}
                      <polygon points="-20,-5 20,0 -20,5" fill="#1c1917" stroke="#111" strokeWidth="1" />
+                     {/* Wings */}
                      <polygon points="-5,0 -25,-35 5,0 -25,35" fill="#292524" stroke="#111" strokeWidth="1" />
                      <circle cx="10" cy="0" r="2" fill="#ef4444" filter="url(#neonGlow)" />
+                     
+                     {/* Trail */}
                      <line x1="-20" y1="-3" x2="-80" y2="-3" stroke="white" strokeWidth="1" opacity="0.3" />
                      <line x1="-20" y1="3" x2="-80" y2="3" stroke="white" strokeWidth="1" opacity="0.3" />
                   </g>
+                  {/* Bomber 2 */}
                   <g transform="translate(-100, 300) scale(1.5)" style={{ filter: 'drop-shadow(0px 40px 20px rgba(0,0,0,0.6))' }}>
                      <polygon points="-20,-5 20,0 -20,5" fill="#1c1917" stroke="#111" strokeWidth="1" />
                      <polygon points="-5,0 -25,-35 5,0 -25,35" fill="#292524" stroke="#111" strokeWidth="1" />
@@ -647,6 +700,7 @@ export const GameBoard = ({
                      <line x1="-20" y1="-3" x2="-80" y2="-3" stroke="white" strokeWidth="1" opacity="0.3" />
                      <line x1="-20" y1="3" x2="-80" y2="3" stroke="white" strokeWidth="1" opacity="0.3" />
                   </g>
+                  {/* Bomber 3 */}
                   <g transform="translate(-150, 500) scale(1.5)" style={{ filter: 'drop-shadow(0px 40px 20px rgba(0,0,0,0.6))' }}>
                      <polygon points="-20,-5 20,0 -20,5" fill="#1c1917" stroke="#111" strokeWidth="1" />
                      <polygon points="-5,0 -25,-35 5,0 -25,35" fill="#292524" stroke="#111" strokeWidth="1" />
@@ -654,6 +708,7 @@ export const GameBoard = ({
                      <line x1="-20" y1="-3" x2="-80" y2="-3" stroke="white" strokeWidth="1" opacity="0.3" />
                      <line x1="-20" y1="3" x2="-80" y2="3" stroke="white" strokeWidth="1" opacity="0.3" />
                   </g>
+                  {/* Giant explosion effect logic would be cool but we can just add a full screen flash animation */}
                 </motion.g>
               ))}
               
@@ -662,7 +717,7 @@ export const GameBoard = ({
                    initial={{ opacity: 0 }}
                    animate={{ opacity: [0, 0.4, 0.1, 0.6, 0] }}
                    transition={{ duration: 1.5, times: [0, 0.2, 0.4, 0.6, 1], ease: "easeInOut", delay: 0.5 }}
-                   x="0" y="0" width="1000" height="700" fill="#f97316" style={{ mixBlendMode: 'color-dodge' }} pointerEvents="none"
+                   x="0" y="0" width="420" height="780" fill="#f97316" style={{ mixBlendMode: 'color-dodge' }} pointerEvents="none"
                  />
               )}
 
@@ -695,6 +750,7 @@ function TurretSlot({ x, y, type, level, rotation = 0, disabledUntil = 0, select
   if (type === 'build') {
     return (
       <g transform={`translate(${x}, ${y})`} onClick={onClick} className="cursor-pointer group">
+         {/* Build Slot Graphics */}
          <circle cx="0" cy="0" r="24" fill="#ffffff" fillOpacity="0.2" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="4 4" className="opacity-50 group-hover:opacity-100 group-hover:fill-[#3b82f6] group-hover:fill-opacity-30 transition-all" />
          <circle cx="0" cy="0" r="14" fill="none" stroke="#2563eb" strokeWidth="1" className="opacity-40 group-hover:opacity-100" />
          <path d="M -6 0 L 6 0 M 0 -6 L 0 6" stroke="#1d4ed8" strokeWidth="2" className="opacity-70 group-hover:opacity-100" />
@@ -704,6 +760,7 @@ function TurretSlot({ x, y, type, level, rotation = 0, disabledUntil = 0, select
     )
   }
 
+  // Built Turret
   let accentColor = "#ef4444";
   if (type === 'mitrailleuse') accentColor = "#f97316";
   else if (type === 'canon') accentColor = "#3b82f6";
@@ -715,10 +772,12 @@ function TurretSlot({ x, y, type, level, rotation = 0, disabledUntil = 0, select
 
   return (
     <g transform={`translate(${x}, ${y})`} onClick={onClick} className="cursor-pointer group">
+      {/* Subtle Pulsing Glow Effect */}
       {showGlow && (
         <circle cx="0" cy="0" r="26" fill={isDisabled ? "#3b82f6" : accentColor} fillOpacity="0.25" className="animate-pulse drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" filter="url(#neonGlow)" />
       )}
 
+      {/* Platform/Base */}
       {selected && (
         <g>
           <circle cx="0" cy="0" r="28" fill="none" stroke="#fff" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[spin_4s_linear_infinite] opacity-80" />
@@ -726,6 +785,7 @@ function TurretSlot({ x, y, type, level, rotation = 0, disabledUntil = 0, select
         </g>
       )}
 
+      {/* Upgrade Visual Effects */}
       {(level || 1) >= 2 && (
         <circle cx="0" cy="0" r="16" fill="none" stroke={accentColor} strokeWidth="3" className="opacity-20 animate-pulse" />
       )}
@@ -747,6 +807,7 @@ function TurretSlot({ x, y, type, level, rotation = 0, disabledUntil = 0, select
       <rect x="-18" y="-18" width="36" height="36" rx="6" fill="#2d160c" stroke={accentColor} strokeWidth={selected ? "2.5" : "1.5"} className={`drop-shadow-xl opacity-90 group-hover:opacity-100 transition-all ${(level || 1) >= 3 ? "shadow-[0_0_15px_currentColor]" : ""}`} style={{ color: accentColor }} />
       <circle cx="0" cy="0" r="14" fill="#030704" stroke="#111" strokeWidth="1" />
       
+      {/* Level Indicator Stars/Chevrons */}
       {(level || 1) > 1 && (
         <g transform={`translate(0, 15)`} className="opacity-90">
           <rect x={-8 - (((level || 1)-1) * 3)} y="-2" width={16 + (((level || 1)-1) * 6)} height="4" rx="2" fill="#000" opacity="0.6" />
@@ -760,6 +821,7 @@ function TurretSlot({ x, y, type, level, rotation = 0, disabledUntil = 0, select
         </g>
       )}
 
+      {/* Turret Body (Point towards target, default 0 or constantly rotating) */}
       <motion.g 
         animate={{ rotate: rotation }} 
         transition={{ duration: 0.1, ease: "linear" }} 
@@ -809,9 +871,11 @@ function TurretSlot({ x, y, type, level, rotation = 0, disabledUntil = 0, select
         )}
       </motion.g>
 
+      {/* Level indicator */}
       <rect x="-11" y="-32" width="22" height="12" rx="2" fill="#000" stroke={accentColor} strokeWidth="0.5" className="opacity-80 drop-shadow-md" />
       <text x="0" y="-23" textAnchor="middle" fill="#fff" fontSize="8" fontWeight="bold">L{level}</text>
 
+      {/* Disabled / EMP status overlay */}
       {isDisabled && (
         <g>
           <circle cx="0" cy="0" r="16" fill="#3b82f6" fillOpacity="0.2" className="animate-ping" />
