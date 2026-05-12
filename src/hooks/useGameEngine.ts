@@ -3,6 +3,13 @@ import { GameState, Enemy, PlacedTurret, Projectile, EnemyType, TowerType } from
 import { getPointOnPath, getPathPoints } from '../utils/path';
 import { ENEMY_CONFIGS, TOWER_CONFIGS } from '../constants';
 
+const computeSellValue = (type: TowerType, level: number): number => {
+  const baseCost = TOWER_CONFIGS[type].cost;
+  // Total invested = baseCost * sum(1.5^i, i=0..level-1) = baseCost * (1.5^level - 1) / 0.5
+  // Sell at 50% refund
+  return Math.floor(baseCost * (Math.pow(1.5, level) - 1));
+};
+
 const getLevelWaves = (level: number) => {
   const numWaves = level * 10;
   return Array.from({ length: numWaves }).map((_, i) => {
@@ -41,6 +48,9 @@ const getLevelWaves = (level: number) => {
 };
 
 export function useGameEngine() {
+  const [speedMultiplier, setSpeedMultiplier] = useState<1 | 2>(1);
+  const speedRef = useRef<1 | 2>(1);
+
   const [gameState, setGameState] = useState<GameState>(() => {
     const savedLevel = parseInt(localStorage.getItem('defense_level') || '1', 10);
     const waves = getLevelWaves(savedLevel);
@@ -63,12 +73,20 @@ export function useGameEngine() {
 
   const stateRef = useRef<GameState>(gameState);
   stateRef.current = gameState;
-  
+
   const wavesRef = useRef(getLevelWaves(gameState.level));
-  
+
   const lastTimeRef = useRef<number>(performance.now());
   const requestRef = useRef<number>(0);
   const waveDataRef = useRef({ spawned: 0, timeSinceLastSpawn: 0 });
+
+  const toggleSpeed = useCallback(() => {
+    setSpeedMultiplier(prev => {
+      const next = prev === 1 ? 2 : 1;
+      speedRef.current = next;
+      return next;
+    });
+  }, []);
 
   const buildTurret = useCallback((slotId: string, x: number, y: number, type: TowerType) => {
     const cost = TOWER_CONFIGS[type].cost;
@@ -119,8 +137,20 @@ export function useGameEngine() {
     }
   }, []);
 
+  const sellTurret = useCallback((slotId: string) => {
+    const turret = stateRef.current.turrets[slotId];
+    if (!turret || stateRef.current.status !== 'playing') return;
+    const refund = computeSellValue(turret.type, turret.level);
+    setGameState(prev => {
+      const newTurrets = { ...prev.turrets };
+      delete newTurrets[slotId];
+      return { ...prev, money: prev.money + refund, turrets: newTurrets };
+    });
+  }, []);
+
   const updateGame = useCallback((time: number) => {
-    const deltaTime = (time - lastTimeRef.current) / 1000;
+    const rawDelta = (time - lastTimeRef.current) / 1000;
+    const deltaTime = rawDelta * speedRef.current;
     lastTimeRef.current = time;
 
     const state = stateRef.current;
@@ -173,7 +203,9 @@ export function useGameEngine() {
         }];
       }
     } else if (waveActive && enemies.length === 0 && waveDataRef.current.spawned >= (currentWaveInfo?.count ?? 0)) {
-       // Wave completed
+       // Wave completed — award bonus
+       const waveBonus = 50 + wave * 25;
+       money += waveBonus;
        waveActive = false;
        if (wave < currentWaves.length) {
          wave++;
@@ -441,5 +473,5 @@ export function useGameEngine() {
     });
   }, []);
 
-  return { gameState, buildTurret, upgradeTurret, togglePause, startWave, callAirstrike };
+  return { gameState, buildTurret, upgradeTurret, sellTurret, togglePause, startWave, callAirstrike, speedMultiplier, toggleSpeed };
 }

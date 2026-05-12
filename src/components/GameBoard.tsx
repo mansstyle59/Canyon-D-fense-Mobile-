@@ -576,6 +576,23 @@ export const GameBoard = ({
                  );
               })}
               
+              {/* Range ring for selected turret */}
+              {selectedTurretId && gameState.turrets[selectedTurretId] && (() => {
+                const t = gameState.turrets[selectedTurretId];
+                return (
+                  <circle
+                    cx={t.x}
+                    cy={t.y}
+                    r={t.range}
+                    fill="rgba(255,255,255,0.04)"
+                    stroke="rgba(255,255,255,0.25)"
+                    strokeWidth="1"
+                    strokeDasharray="6 4"
+                    pointerEvents="none"
+                  />
+                );
+              })()}
+
               {/* Perfectly Aligned Turret Placements inside SVG coordinate space */}
               {/* Allow clicking on these elements since the svg itself ignores pointer events */}
               <g className="pointer-events-auto">

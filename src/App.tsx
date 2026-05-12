@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Play, Pause, Crosshair, Zap, Target, Flame, Rocket, AlertTriangle, Plane } from 'lucide-react';
+import { Play, Pause, Crosshair, Zap, Target, Flame, Rocket, AlertTriangle, Plane, FastForward } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TOWER_CONFIGS } from './constants';
 import { GameBoard } from './components/GameBoard';
@@ -8,8 +8,8 @@ import { TowerType } from './types';
 import { useGameEngine } from './hooks/useGameEngine';
 
 export default function App() {
-  const { gameState, buildTurret, upgradeTurret, togglePause, startWave, callAirstrike } = useGameEngine();
-  const { money, lives, level, wave, maxWaves, status, waveActive, lastAirstrikeTime } = gameState;
+  const { gameState, buildTurret, upgradeTurret, sellTurret, togglePause, startWave, callAirstrike, speedMultiplier, toggleSpeed } = useGameEngine();
+  const { money, lives, level, wave, maxWaves, status, waveActive, lastAirstrikeTime, enemies } = gameState;
   const [selectedTower, setSelectedTower] = useState<TowerType | null>(null);
   const [selectedTurretId, setSelectedTurretId] = useState<string | null>(null);
 
@@ -98,6 +98,11 @@ export default function App() {
               <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-[#a16223] font-bold opacity-80 mb-0.5 md:mb-1">Fonds</span>
               <span className="text-sm md:text-xl font-mono text-stone-800 leading-none">${formatMoney(money)}</span>
             </div>
+            <div className="w-px h-6 md:h-8 bg-[#d4c3a3]"></div>
+            <div className="flex flex-col">
+              <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-orange-700 font-bold opacity-80 mb-0.5 md:mb-1">Ennemis</span>
+              <span className="text-sm md:text-xl font-mono tracking-tighter leading-none text-stone-800">{enemies.length}</span>
+            </div>
           </div>
         </div>
 
@@ -114,9 +119,9 @@ export default function App() {
             </button>
           )}
 
-          <div className="bg-[#fcf7e8]/90 backdrop-blur-xl border border-[#d4c3a3] p-1 md:p-1.5 rounded-xl shadow-xl">
-            <button 
-              onClick={togglePause} 
+          <div className="bg-[#fcf7e8]/90 backdrop-blur-xl border border-[#d4c3a3] p-1 md:p-1.5 rounded-xl shadow-xl flex gap-1">
+            <button
+              onClick={togglePause}
               disabled={status === 'game_over' || status === 'victory'}
               className={`group flex items-center justify-center rounded-lg px-4 py-2 md:px-5 md:py-2.5 transition-all active:scale-95 border ${status === 'playing' ? 'bg-[#eee6d3] hover:bg-[#e0d5ba] border-[#cbb790] text-stone-800' : 'bg-green-100 hover:bg-green-200 border-green-300 text-green-800 shadow-sm'}`}
             >
@@ -131,6 +136,17 @@ export default function App() {
                   <span className="uppercase tracking-[0.2em] font-bold text-[9px] md:text-[10px]">Reprendre</span>
                 </div>
               )}
+            </button>
+            <button
+              onClick={toggleSpeed}
+              disabled={status === 'game_over' || status === 'victory'}
+              className={`group flex items-center justify-center rounded-lg px-3 py-2 md:px-4 md:py-2.5 transition-all active:scale-95 border ${speedMultiplier === 2 ? 'bg-orange-100 border-orange-400 text-orange-700 shadow-[inset_0_0_8px_rgba(249,115,22,0.15)]' : 'bg-[#eee6d3] hover:bg-[#e0d5ba] border-[#cbb790] text-stone-800'}`}
+              title="Vitesse de jeu"
+            >
+              <div className="flex items-center gap-1.5">
+                <FastForward className={`w-3.5 h-3.5 md:w-4 md:h-4 ${speedMultiplier === 2 ? 'fill-orange-600' : ''}`} />
+                <span className="uppercase tracking-[0.2em] font-bold text-[9px] md:text-[10px]">{speedMultiplier}x</span>
+              </div>
             </button>
           </div>
         </div>
@@ -209,13 +225,24 @@ export default function App() {
                             </div>
                           </div>
 
-                          <button 
-                            onClick={() => upgradeTurret(selectedTurretId)}
-                            disabled={!canAffordUpgrade || status !== 'playing'}
-                            className={`w-full py-1.5 md:py-2 mt-1 rounded font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all ${canAffordUpgrade && status === 'playing' ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.4)] border border-orange-500' : 'bg-black/40 text-white/30 border border-white/5 cursor-not-allowed'}`}
-                          >
-                            UPGRADE [ ${formatMoney(upgradeCost)} ]
-                          </button>
+                          <div className="flex gap-2 mt-1">
+                            <button
+                              onClick={() => upgradeTurret(selectedTurretId)}
+                              disabled={!canAffordUpgrade || status !== 'playing'}
+                              className={`flex-1 py-1.5 md:py-2 rounded font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all ${canAffordUpgrade && status === 'playing' ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.4)] border border-orange-500' : 'bg-black/40 text-white/30 border border-white/5 cursor-not-allowed'}`}
+                            >
+                              UPGRADE [ ${formatMoney(upgradeCost)} ]
+                            </button>
+                            <button
+                              onClick={() => { sellTurret(selectedTurretId); setSelectedTurretId(null); }}
+                              disabled={status !== 'playing'}
+                              className="py-1.5 md:py-2 px-2 md:px-3 rounded font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all bg-red-900/60 hover:bg-red-700 text-red-300 border border-red-700/50 hover:text-white hover:border-red-500"
+                              title={`Vendre (+$${formatMoney(Math.floor(TOWER_CONFIGS[turret.type].cost * (Math.pow(1.5, turret.level) - 1)))})`}
+                            >
+                              VENDRE<br/>
+                              <span className="text-[8px] text-red-400">${formatMoney(Math.floor(TOWER_CONFIGS[turret.type].cost * (Math.pow(1.5, turret.level) - 1)))}</span>
+                            </button>
+                          </div>
                         </div>
                       );
                     })()}
