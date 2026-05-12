@@ -237,12 +237,7 @@ export function useGameEngine() {
           newStatus = 'game_over';
         }
       } else {
-        const pt = enemy.isFlying 
-          ? {
-              x: getPointOnPath(0).x + (getPointOnPath(totalPathLength).x - getPointOnPath(0).x) * (nextProgress / totalPathLength),
-              y: getPointOnPath(0).y + (getPointOnPath(totalPathLength).y - getPointOnPath(0).y) * (nextProgress / totalPathLength)
-            }
-          : getPointOnPath(nextProgress);
+        const pt = getPointOnPath(nextProgress);
         let rotation = enemy.rotation;
         
         // update rotation if moving
