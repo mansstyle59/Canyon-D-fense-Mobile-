@@ -12,6 +12,9 @@ export default function App() {
   const { money, lives, level, wave, maxWaves, status, waveActive, lastAirstrikeTime, enemies } = gameState;
   const [selectedTower, setSelectedTower] = useState<TowerType | null>(null);
   const [selectedTurretId, setSelectedTurretId] = useState<string | null>(null);
+  const [dismissedStatus, setDismissedStatus] = useState('');
+  const [hintDismissed, setHintDismissed] = useState(false);
+  const overlayVisible = (status === 'game_over' || status === 'victory') && dismissedStatus !== status;
 
   const formatMoney = (val: number) => Math.floor(val).toLocaleString('en-US');
 
@@ -22,7 +25,7 @@ export default function App() {
   return (
     <div className="relative h-screen w-screen bg-[#e6dcc3] overflow-hidden text-stone-900 font-sans select-none">
       {/* Background Map Layer */}
-      <div className="absolute top-16 md:top-24 bottom-36 md:bottom-44 left-0 right-0 z-0 border-y border-[#3a352a]/50">
+      <div className="absolute top-12 bottom-32 left-0 right-0 z-0 border-y border-[#3a352a]/50">
         <GameBoard 
            gameState={gameState} 
            buildTurret={buildTurret} 
@@ -35,137 +38,117 @@ export default function App() {
 
       {/* Floating HUD (Top) */}
       <AnimatePresence>
-        {status === 'game_over' && (
-          <motion.div 
+        {overlayVisible && status === 'game_over' && (
+          <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-red-900/40 backdrop-blur-sm z-50 flex items-center justify-center flex-col pointer-events-auto"
+            className="absolute inset-0 bg-red-900/50 backdrop-blur-sm z-50 flex items-center justify-center flex-col pointer-events-auto"
           >
-             <h1 className="text-6xl font-bold text-red-500 mb-4 tracking-widest uppercase" style={{ textShadow: '0 0 40px red'}}>Mission Échouée</h1>
-             <p className="text-xl text-red-200">Le noyau a été compromis.</p>
-             <button onClick={() => window.location.reload()} className="mt-8 px-8 py-3 bg-red-600 hover:bg-red-500 rounded font-bold uppercase tracking-widest transition-colors shadow-[0_0_20px_rgba(220,38,38,0.5)]">Recommencer le Niveau {level}</button>
-             
-             {level > 1 && (
-                <button onClick={() => {
-                  localStorage.setItem('defense_level', '1');
-                  window.location.reload();
-                }} className="mt-4 px-4 py-2 text-sm text-red-300/60 hover:text-red-200 border border-red-400/20 hover:border-red-400/50 rounded uppercase tracking-widest transition-colors">Retourner au Niveau 1</button>
-             )}
+            {/* Close X */}
+            <button onClick={() => setDismissedStatus(status)} className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-black/40 border border-red-500/40 text-red-300 hover:bg-red-900/60 hover:text-white transition-colors text-lg font-bold">✕</button>
+            <h1 className="text-5xl font-bold text-red-500 mb-3 tracking-widest uppercase" style={{ textShadow: '0 0 40px red'}}>Mission Échouée</h1>
+            <p className="text-base text-red-200 mb-1">Le noyau a été compromis.</p>
+            <button onClick={() => window.location.reload()} className="mt-6 px-8 py-3 bg-red-600 hover:bg-red-500 rounded-lg font-bold uppercase tracking-widest transition-colors shadow-[0_0_20px_rgba(220,38,38,0.5)]">Recommencer Niveau {level}</button>
+            {level > 1 && (
+              <button onClick={() => { localStorage.setItem('defense_level', '1'); window.location.reload(); }} className="mt-3 px-4 py-2 text-sm text-red-300/60 hover:text-red-200 border border-red-400/20 hover:border-red-400/50 rounded uppercase tracking-widest transition-colors">Retourner au Niveau 1</button>
+            )}
           </motion.div>
         )}
-        {status === 'victory' && (
-          <motion.div 
+        {overlayVisible && status === 'victory' && (
+          <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-orange-900/40 backdrop-blur-sm z-50 flex items-center justify-center flex-col pointer-events-auto"
+            className="absolute inset-0 bg-orange-900/50 backdrop-blur-sm z-50 flex items-center justify-center flex-col pointer-events-auto"
           >
-             <h1 className="text-6xl font-bold text-orange-400 mb-4 tracking-widest uppercase" style={{ textShadow: '0 0 40px #f97316'}}>Victoire</h1>
-             <p className="text-xl text-orange-200">Le niveau {level} est sécurisé.</p>
-             <button onClick={() => {
-               localStorage.setItem('defense_level', String(level + 1));
-               window.location.reload();
-             }} className="mt-8 px-8 py-3 bg-orange-600 hover:bg-orange-500 rounded font-bold uppercase tracking-widest transition-colors shadow-[0_0_20px_rgba(234,88,12,0.5)]">Niveau Suivant</button>
-             
-             {level > 1 && (
-                <button onClick={() => {
-                  localStorage.setItem('defense_level', '1');
-                  window.location.reload();
-                }} className="mt-4 px-4 py-2 text-sm text-orange-300/60 hover:text-orange-200 border border-orange-400/20 hover:border-orange-400/50 rounded uppercase tracking-widest transition-colors">Recommencer Niveau 1</button>
-             )}
+            {/* Close X */}
+            <button onClick={() => setDismissedStatus(status)} className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-black/40 border border-orange-500/40 text-orange-300 hover:bg-orange-900/60 hover:text-white transition-colors text-lg font-bold">✕</button>
+            <h1 className="text-5xl font-bold text-orange-400 mb-3 tracking-widest uppercase" style={{ textShadow: '0 0 40px #f97316'}}>Victoire!</h1>
+            <p className="text-base text-orange-200 mb-1">Le niveau {level} est sécurisé.</p>
+            <button onClick={() => { localStorage.setItem('defense_level', String(level + 1)); window.location.reload(); }} className="mt-6 px-8 py-3 bg-orange-600 hover:bg-orange-500 rounded-lg font-bold uppercase tracking-widest transition-colors shadow-[0_0_20px_rgba(234,88,12,0.5)]">Niveau Suivant</button>
+            {level > 1 && (
+              <button onClick={() => { localStorage.setItem('defense_level', '1'); window.location.reload(); }} className="mt-3 px-4 py-2 text-sm text-orange-300/60 hover:text-orange-200 border border-orange-400/20 hover:border-orange-400/50 rounded uppercase tracking-widest transition-colors">Recommencer Niveau 1</button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="absolute top-2 left-4 right-4 md:top-6 md:left-8 md:right-8 flex items-start justify-between z-40 pointer-events-none">
-        
-        {/* Top Left: Stats */}
-        <div className="flex gap-2 md:gap-4 pointer-events-auto">
-          <div className="bg-[#fcf7e8]/90 backdrop-blur-xl border border-[#d4c3a3] rounded-xl px-4 py-2 md:px-6 md:py-3 flex items-center gap-3 md:gap-6 shadow-xl">
-            <div className="flex flex-col">
-              <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-[#a16223] font-bold opacity-80 mb-0.5 md:mb-1">Niveau</span>
-              <span className="text-sm md:text-xl font-mono tracking-tighter leading-none text-stone-800">{level}</span>
+      {/* ── Compact Top HUD ── */}
+      <div className="absolute top-1.5 left-2 right-2 flex items-center justify-between gap-2 z-40 pointer-events-none">
+
+        {/* Stats pill */}
+        <div className="pointer-events-auto flex-shrink-0">
+          <div className="bg-[#1c1a17]/88 backdrop-blur-xl border border-[#3a352a] rounded-xl px-2.5 py-1.5 flex items-center gap-2 shadow-xl">
+            {/* Niveau */}
+            <div className="flex items-baseline gap-1">
+              <span className="text-[7px] uppercase tracking-widest text-[#a16223] font-bold opacity-70">Niv</span>
+              <span className="text-xs font-mono font-bold text-[#e8dcc4]">{level}</span>
             </div>
-            <div className="w-px h-6 md:h-8 bg-[#d4c3a3]"></div>
-            <div className="flex flex-col min-w-[52px]">
-              <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-green-700 font-bold opacity-80 mb-0.5 md:mb-1">Vague</span>
-              <span className="text-sm md:text-xl font-mono tracking-tighter leading-none text-stone-800">{wave} <span className="text-stone-500 text-xs md:text-sm">/ {maxWaves}</span></span>
-              <div className="w-full mt-1 h-[3px] bg-stone-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-700"
-                  style={{
-                    width: `${Math.round(((waveActive ? wave - 0.5 : wave - 1) / maxWaves) * 100)}%`,
-                    background: waveActive ? '#f97316' : '#22c55e',
-                  }}
-                />
+            <div className="w-px h-4 bg-[#3a352a]"></div>
+            {/* Vague + mini progress */}
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-baseline gap-1">
+                <span className="text-[7px] uppercase tracking-widest text-green-500 font-bold opacity-80">Vague</span>
+                <span className="text-xs font-mono font-bold text-[#e8dcc4]">{wave}<span className="text-[#6b6558] text-[9px]">/{maxWaves}</span></span>
+              </div>
+              <div className="w-16 h-[2px] bg-[#2a241c] rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${Math.round(((waveActive ? wave - 0.5 : wave - 1) / maxWaves) * 100)}%`, background: waveActive ? '#f97316' : '#22c55e' }} />
               </div>
             </div>
-            <div className="w-px h-6 md:h-8 bg-[#d4c3a3]"></div>
-            <div className="flex flex-col">
-              <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-red-700 font-bold opacity-80 mb-0.5 md:mb-1">Vies</span>
-              <span className="text-sm md:text-xl font-mono tracking-tighter leading-none text-red-700">{lives}</span>
+            <div className="w-px h-4 bg-[#3a352a]"></div>
+            {/* Vies */}
+            <div className="flex items-baseline gap-1">
+              <span className="text-[7px] uppercase tracking-widest text-red-500 font-bold opacity-80">❤</span>
+              <span className="text-xs font-mono font-bold text-red-400">{lives}</span>
             </div>
-            <div className="w-px h-6 md:h-8 bg-[#d4c3a3]"></div>
-            <div className="flex flex-col">
-              <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-[#a16223] font-bold opacity-80 mb-0.5 md:mb-1">Fonds</span>
-              <span className="text-sm md:text-xl font-mono text-stone-800 leading-none">${formatMoney(money)}</span>
+            <div className="w-px h-4 bg-[#3a352a]"></div>
+            {/* Fonds */}
+            <div className="flex items-baseline gap-1">
+              <span className="text-[7px] uppercase tracking-widest text-yellow-600 font-bold opacity-80">$</span>
+              <span className="text-xs font-mono font-bold text-[#e8dcc4]">{formatMoney(money)}</span>
             </div>
-            <div className="w-px h-6 md:h-8 bg-[#d4c3a3]"></div>
-            <div className="flex flex-col">
-              <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-orange-700 font-bold opacity-80 mb-0.5 md:mb-1">Ennemis</span>
-              <span className="text-sm md:text-xl font-mono tracking-tighter leading-none text-stone-800">{enemies.length}</span>
-            </div>
+            {enemies.length > 0 && <>
+              <div className="w-px h-4 bg-[#3a352a]"></div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-[7px] uppercase tracking-widest text-orange-500 font-bold opacity-80">⚠</span>
+                <span className="text-xs font-mono font-bold text-orange-400">{enemies.length}</span>
+              </div>
+            </>}
           </div>
         </div>
 
-        {/* Top Right: Core & Controls */}
-        <div className="flex items-center gap-2 md:gap-3 pointer-events-auto">
+        {/* Right controls */}
+        <div className="pointer-events-auto flex items-center gap-1.5 flex-shrink-0">
           {!waveActive && status === 'playing' && (
-            <button 
-              onClick={startWave}
-              className="group relative overflow-hidden bg-orange-600 hover:bg-orange-500 text-white rounded-xl px-4 py-2 md:px-5 md:py-2.5 shadow-[0_0_20px_rgba(234,88,12,0.4)] border border-orange-400/50 transition-transform active:scale-95 flex items-center gap-2"
+            <button onClick={startWave}
+              className="group relative overflow-hidden bg-orange-600 hover:bg-orange-500 text-white rounded-lg px-3 py-1.5 shadow-[0_0_14px_rgba(234,88,12,0.5)] border border-orange-400/50 transition-all active:scale-95 flex items-center gap-1.5"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-orange-400/0 via-white/20 to-orange-400/0 translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite]"></div>
-              <Play className="w-3.5 h-3.5 md:w-4 md:h-4 fill-white" />
-              <span className="uppercase tracking-[0.2em] font-bold text-[9px] md:text-[10px] drop-shadow-md">Lancer Vague</span>
+              <Play className="w-3 h-3 fill-white" />
+              <span className="uppercase tracking-[0.18em] font-bold text-[9px] drop-shadow-md">Vague</span>
             </button>
           )}
-
-          <div className="bg-[#fcf7e8]/90 backdrop-blur-xl border border-[#d4c3a3] p-1 md:p-1.5 rounded-xl shadow-xl flex gap-1">
-            <button
-              onClick={togglePause}
-              disabled={status === 'game_over' || status === 'victory'}
-              className={`group flex items-center justify-center rounded-lg px-4 py-2 md:px-5 md:py-2.5 transition-all active:scale-95 border ${status === 'playing' ? 'bg-[#eee6d3] hover:bg-[#e0d5ba] border-[#cbb790] text-stone-800' : 'bg-green-100 hover:bg-green-200 border-green-300 text-green-800 shadow-sm'}`}
+          <div className="bg-[#1c1a17]/88 backdrop-blur-xl border border-[#3a352a] p-1 rounded-lg shadow-xl flex gap-1">
+            <button onClick={togglePause} disabled={status === 'game_over' || status === 'victory'}
+              className={`flex items-center justify-center rounded px-2.5 py-1 transition-all active:scale-95 border text-[9px] font-bold uppercase tracking-widest gap-1.5
+                ${status === 'playing' ? 'bg-[#2a241c] hover:bg-[#3a352a] border-[#4a4031] text-[#d4c3a3]' : 'bg-green-900/40 hover:bg-green-800/60 border-green-700/50 text-green-400'}`}
             >
-              {status === 'playing' ? (
-                <div className="flex items-center gap-2">
-                  <Pause className="w-3.5 h-3.5 md:w-4 md:h-4 fill-current" />
-                  <span className="uppercase tracking-[0.2em] font-bold text-[9px] md:text-[10px]">Pause</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Play className="w-3.5 h-3.5 md:w-4 md:h-4 fill-current" />
-                  <span className="uppercase tracking-[0.2em] font-bold text-[9px] md:text-[10px]">Reprendre</span>
-                </div>
-              )}
+              {status === 'playing' ? <><Pause className="w-3 h-3 fill-current" />Pause</> : <><Play className="w-3 h-3 fill-current" />Go</>}
             </button>
-            <button
-              onClick={toggleSpeed}
-              disabled={status === 'game_over' || status === 'victory'}
-              className={`group flex items-center justify-center rounded-lg px-3 py-2 md:px-4 md:py-2.5 transition-all active:scale-95 border ${speedMultiplier === 2 ? 'bg-orange-100 border-orange-400 text-orange-700 shadow-[inset_0_0_8px_rgba(249,115,22,0.15)]' : 'bg-[#eee6d3] hover:bg-[#e0d5ba] border-[#cbb790] text-stone-800'}`}
-              title="Vitesse de jeu"
+            <button onClick={toggleSpeed} disabled={status === 'game_over' || status === 'victory'}
+              className={`flex items-center justify-center rounded px-2 py-1 transition-all active:scale-95 border gap-1
+                ${speedMultiplier === 2 ? 'bg-orange-900/50 border-orange-600/60 text-orange-400 shadow-[inset_0_0_6px_rgba(249,115,22,0.2)]' : 'bg-[#2a241c] hover:bg-[#3a352a] border-[#4a4031] text-[#d4c3a3]'}`}
             >
-              <div className="flex items-center gap-1.5">
-                <FastForward className={`w-3.5 h-3.5 md:w-4 md:h-4 ${speedMultiplier === 2 ? 'fill-orange-600' : ''}`} />
-                <span className="uppercase tracking-[0.2em] font-bold text-[9px] md:text-[10px]">{speedMultiplier}x</span>
-              </div>
+              <FastForward className={`w-3 h-3 ${speedMultiplier === 2 ? 'fill-orange-500' : ''}`} />
+              <span className="text-[9px] font-bold uppercase">{speedMultiplier}x</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Floating Arsenal Bar (Bottom) */}
-      <div className="absolute bottom-2 md:bottom-8 left-0 right-0 flex flex-col items-center justify-center z-40 pointer-events-none px-2 space-y-2">
+      <div className="absolute bottom-1 left-0 right-0 flex flex-col items-center justify-center z-40 pointer-events-none px-2 space-y-1.5">
         <div className="w-full max-w-max flex flex-col items-center">
           {/* Top of the menu actions (or Upgrade Panel) */}
-          <div className="w-full flex justify-between items-end mb-2 px-2">
+          <div className="w-full flex justify-between items-end mb-1.5 px-2">
             <div className="flex-1 pointer-events-auto flex justify-start">
               {/* Upgrade Panel */}
               <AnimatePresence>
@@ -256,50 +239,46 @@ export default function App() {
                       );
                     })()}
                   </motion.div>
-                ) : !selectedTower ? (
-                  <motion.div 
+                ) : !selectedTower && !hintDismissed ? (
+                  <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex flex-col gap-1.5 bg-[#1c1a17]/95 backdrop-blur-md border border-[#3a352a] px-4 py-2.5 rounded-lg shadow-[0_5px_15px_rgba(0,0,0,0.5)] max-w-[300px]"
+                    className="relative flex flex-col gap-1 bg-[#1c1a17]/95 backdrop-blur-md border border-[#3a352a] px-3 py-2 rounded-lg shadow-[0_5px_15px_rgba(0,0,0,0.5)] max-w-[280px]"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-1.5 h-1.5 bg-orange-500 rounded-sm animate-pulse shadow-[0_0_8px_#f97316]"></div>
-                      <span className="text-[9px] md:text-[10px] text-orange-400 font-bold uppercase tracking-widest font-mono">EN ATTENTE D'ORDRES</span>
+                    <button onClick={() => setHintDismissed(true)} className="absolute top-1.5 right-1.5 w-5 h-5 flex items-center justify-center rounded text-[#a38580] hover:text-white hover:bg-white/10 text-xs font-bold transition-colors">✕</button>
+                    <div className="flex items-center gap-2 pr-5">
+                      <div className="w-1.5 h-1.5 bg-orange-500 rounded-sm animate-pulse shadow-[0_0_6px_#f97316] flex-shrink-0"></div>
+                      <span className="text-[9px] text-orange-400 font-bold uppercase tracking-widest font-mono">En attente d'ordres</span>
                     </div>
-                    <ul className="text-[9px] text-[#a38580] space-y-1 mt-1 font-medium list-disc list-inside">
-                      <li>Sélectionnez un armement pour le déployer</li>
-                      <li>Touchez une tourelle pour l'améliorer</li>
-                      <li>Blindages: Les armes non perce-blindage perdent 70% de dégâts.</li>
-                      <li>Antiaérien: Seules les DCA / Missiles touchent les volants.</li>
+                    <ul className="text-[8px] text-[#a38580] space-y-0.5 font-medium list-disc list-inside leading-tight">
+                      <li>Sélectionnez un armement, puis une zone ⊕</li>
+                      <li>Touchez une tourelle pour l'améliorer/vendre</li>
+                      <li>Blindés: -70% dégâts sans perce-blindage</li>
+                      <li>DCA/Missiles uniquement contre les volants</li>
                     </ul>
                   </motion.div>
                 ) : null}
               </AnimatePresence>
             </div>
             
-            <div className="flex-shrink-0 mx-4 max-w-[300px]">
+            <div className="flex-shrink-0 mx-2 max-w-[260px]">
               {selectedTower && (
-                <div className="bg-[#1c1a17]/95 backdrop-blur border border-[#3a352a] rounded-lg shadow-[0_5px_15px_rgba(0,0,0,0.5)] pointer-events-auto overflow-hidden">
-                  <div className="px-3 py-2 border-b border-[#3a352a] flex items-center gap-2 bg-[#2a261f]">
+                <div className="relative bg-[#1c1a17]/95 backdrop-blur border border-[#3a352a] rounded-lg shadow-[0_5px_15px_rgba(0,0,0,0.5)] pointer-events-auto overflow-hidden">
+                  <button onClick={() => setSelectedTower(null)} className="absolute top-1.5 right-1.5 z-10 w-5 h-5 flex items-center justify-center rounded text-[#a38580] hover:text-white hover:bg-white/10 text-xs font-bold transition-colors">✕</button>
+                  <div className="px-3 py-1.5 border-b border-[#3a352a] flex items-center gap-2 bg-[#2a261f] pr-7">
                     <div className="w-1.5 h-1.5 bg-[#a3e635] rounded-sm animate-pulse shadow-[0_0_5px_rgba(163,230,53,0.8)]"></div>
-                    <span className="text-[#a3e635] font-mono text-[9px] md:text-[10px] tracking-widest uppercase font-bold drop-shadow-[0_0_2px_rgba(163,230,53,0.5)]">
-                      SÉLECTIONNEZ UNE ZONE
+                    <span className="text-[#a3e635] font-mono text-[8px] tracking-widest uppercase font-bold drop-shadow-[0_0_2px_rgba(163,230,53,0.5)]">
+                      Sélectionnez une zone
                     </span>
                   </div>
                   <div className="px-3 py-2">
-                    <p className="text-[10px] md:text-[11px] text-[#e8dcc4] font-medium leading-relaxed">
+                    <p className="text-[9px] text-[#e8dcc4] font-medium leading-snug">
                       {TOWER_CONFIGS[selectedTower].desc}
                     </p>
-                    <div className="mt-2 flex items-center gap-3 text-[9px] font-mono text-[#a38580] uppercase tracking-wider">
-                      <span className="flex items-center gap-1">
-                        Cibles: {TOWER_CONFIGS[selectedTower].targetsAir && TOWER_CONFIGS[selectedTower].targetsGround ? 'SOL/AIR' : TOWER_CONFIGS[selectedTower].targetsAir ? 'AIR' : 'SOL'}
-                      </span>
-                      {TOWER_CONFIGS[selectedTower].armorPiercing && (
-                        <span className="flex items-center gap-1 text-orange-400">
-                          PERCE-BLINDAGE
-                        </span>
-                      )}
+                    <div className="mt-1.5 flex items-center gap-2 text-[8px] font-mono text-[#a38580] uppercase tracking-wider">
+                      <span>Cibles: {TOWER_CONFIGS[selectedTower].targetsAir && TOWER_CONFIGS[selectedTower].targetsGround ? 'SOL/AIR' : TOWER_CONFIGS[selectedTower].targetsAir ? 'AIR' : 'SOL'}</span>
+                      {TOWER_CONFIGS[selectedTower].armorPiercing && <span className="text-orange-400">PERCE-BLINDAGE</span>}
                     </div>
                   </div>
                 </div>
