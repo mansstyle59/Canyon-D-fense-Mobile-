@@ -29,13 +29,13 @@ export function getPathPoints() {
     // Fallback static points if something fails with DOM methods
     console.error("SVG Path calculation failed, using fallback points");
     cachedPathPoints = [
-      {x: -50, y: 120}, {x: 100, y: 120}, {x: 300, y: 120},
-      {x: 400, y: 110}, {x: 500, y: 150}, {x: 650, y: 220},
-      {x: 820, y: 250}, {x: 850, y: 350}, {x: 750, y: 450},
-      {x: 600, y: 500}, {x: 400, y: 400}, {x: 250, y: 450},
-      {x: 150, y: 560}, {x: -50, y: 500}
+      {x: -20, y: 120}, {x: 90, y: 85}, {x: 250, y: 70}, {x: 370, y: 135},
+      {x: 405, y: 200}, {x: 405, y: 275}, {x: 340, y: 315},
+      {x: 270, y: 355}, {x: 130, y: 370}, {x: 110, y: 428},
+      {x: 95, y: 490}, {x: 225, y: 542}, {x: 360, y: 567},
+      {x: 400, y: 585}, {x: 235, y: 658}, {x: -20, y: 682}
     ];
-    pathLength = 1500; // rough total length
+    pathLength = 1900;
   }
   
   return { points: cachedPathPoints, length: pathLength };
