@@ -21,7 +21,6 @@ export default function App() {
 
   return (
     <div className="relative h-screen w-screen bg-[#e6dcc3] overflow-hidden text-stone-900 font-sans select-none">
-      {/* Background Map Layer */}
       <div className="absolute top-16 md:top-24 bottom-36 md:bottom-44 left-0 right-0 z-0 border-y border-[#3a352a]/50">
         <GameBoard 
            gameState={gameState} 
@@ -33,7 +32,6 @@ export default function App() {
         />
       </div>
 
-      {/* Floating HUD (Top) */}
       <AnimatePresence>
         {status === 'game_over' && (
           <motion.div 
@@ -43,12 +41,8 @@ export default function App() {
              <h1 className="text-6xl font-bold text-red-500 mb-4 tracking-widest uppercase" style={{ textShadow: '0 0 40px red'}}>Mission Échouée</h1>
              <p className="text-xl text-red-200">Le noyau a été compromis.</p>
              <button onClick={() => window.location.reload()} className="mt-8 px-8 py-3 bg-red-600 hover:bg-red-500 rounded font-bold uppercase tracking-widest transition-colors shadow-[0_0_20px_rgba(220,38,38,0.5)]">Recommencer le Niveau {level}</button>
-             
              {level > 1 && (
-                <button onClick={() => {
-                  localStorage.setItem('defense_level', '1');
-                  window.location.reload();
-                }} className="mt-4 px-4 py-2 text-sm text-red-300/60 hover:text-red-200 border border-red-400/20 hover:border-red-400/50 rounded uppercase tracking-widest transition-colors">Retourner au Niveau 1</button>
+                <button onClick={() => { localStorage.setItem('defense_level', '1'); window.location.reload(); }} className="mt-4 px-4 py-2 text-sm text-red-300/60 hover:text-red-200 border border-red-400/20 hover:border-red-400/50 rounded uppercase tracking-widest transition-colors">Retourner au Niveau 1</button>
              )}
           </motion.div>
         )}
@@ -59,24 +53,15 @@ export default function App() {
           >
              <h1 className="text-6xl font-bold text-orange-400 mb-4 tracking-widest uppercase" style={{ textShadow: '0 0 40px #f97316'}}>Victoire</h1>
              <p className="text-xl text-orange-200">Le niveau {level} est sécurisé.</p>
-             <button onClick={() => {
-               localStorage.setItem('defense_level', String(level + 1));
-               window.location.reload();
-             }} className="mt-8 px-8 py-3 bg-orange-600 hover:bg-orange-500 rounded font-bold uppercase tracking-widest transition-colors shadow-[0_0_20px_rgba(234,88,12,0.5)]">Niveau Suivant</button>
-             
+             <button onClick={() => { localStorage.setItem('defense_level', String(level + 1)); window.location.reload(); }} className="mt-8 px-8 py-3 bg-orange-600 hover:bg-orange-500 rounded font-bold uppercase tracking-widest transition-colors shadow-[0_0_20px_rgba(234,88,12,0.5)]">Niveau Suivant</button>
              {level > 1 && (
-                <button onClick={() => {
-                  localStorage.setItem('defense_level', '1');
-                  window.location.reload();
-                }} className="mt-4 px-4 py-2 text-sm text-orange-300/60 hover:text-orange-200 border border-orange-400/20 hover:border-orange-400/50 rounded uppercase tracking-widest transition-colors">Recommencer Niveau 1</button>
+                <button onClick={() => { localStorage.setItem('defense_level', '1'); window.location.reload(); }} className="mt-4 px-4 py-2 text-sm text-orange-300/60 hover:text-orange-200 border border-orange-400/20 hover:border-orange-400/50 rounded uppercase tracking-widest transition-colors">Recommencer Niveau 1</button>
              )}
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="absolute top-2 left-4 right-4 md:top-6 md:left-8 md:right-8 flex items-start justify-between z-40 pointer-events-none">
-        
-        {/* Top Left: Stats */}
         <div className="flex gap-2 md:gap-4 pointer-events-auto">
           <div className="bg-[#fcf7e8]/90 backdrop-blur-xl border border-[#d4c3a3] rounded-xl px-4 py-2 md:px-6 md:py-3 flex items-center gap-3 md:gap-6 shadow-xl">
             <div className="flex flex-col">
@@ -115,7 +100,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Top Right: Core & Controls */}
         <div className="flex items-center gap-2 md:gap-3 pointer-events-auto">
           {!waveActive && status === 'playing' && (
             <button 
@@ -150,7 +134,6 @@ export default function App() {
               onClick={toggleSpeed}
               disabled={status === 'game_over' || status === 'victory'}
               className={`group flex items-center justify-center rounded-lg px-3 py-2 md:px-4 md:py-2.5 transition-all active:scale-95 border ${speedMultiplier === 2 ? 'bg-orange-100 border-orange-400 text-orange-700 shadow-[inset_0_0_8px_rgba(249,115,22,0.15)]' : 'bg-[#eee6d3] hover:bg-[#e0d5ba] border-[#cbb790] text-stone-800'}`}
-              title="Vitesse de jeu"
             >
               <div className="flex items-center gap-1.5">
                 <FastForward className={`w-3.5 h-3.5 md:w-4 md:h-4 ${speedMultiplier === 2 ? 'fill-orange-600' : ''}`} />
@@ -161,13 +144,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* Floating Arsenal Bar (Bottom) */}
       <div className="absolute bottom-2 md:bottom-8 left-0 right-0 flex flex-col items-center justify-center z-40 pointer-events-none px-2 space-y-2">
         <div className="w-full max-w-max flex flex-col items-center">
-          {/* Top of the menu actions (or Upgrade Panel) */}
           <div className="w-full flex justify-between items-end mb-2 px-2">
             <div className="flex-1 pointer-events-auto flex justify-start">
-              {/* Upgrade Panel */}
               <AnimatePresence>
                 {selectedTurretId && gameState.turrets[selectedTurretId] ? (
                   <motion.div 
@@ -176,7 +156,6 @@ export default function App() {
                     exit={{ opacity: 0, y: 20 }}
                     className="bg-[#1c1a17]/95 backdrop-blur-md border-[2px] border-[#3a352a] p-3 md:p-4 rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.8)] min-w-[200px] md:min-w-[240px] relative overflow-hidden"
                   >
-                    {/* Tactical lines */}
                     <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#fb923c] to-transparent opacity-30"></div>
                     <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#fb923c]"></div>
                     <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#fb923c]"></div>
@@ -202,9 +181,7 @@ export default function App() {
                                 {config.armorPiercing && <span className="text-orange-500">PERCE-BLINDAGE</span>}
                               </div>
                             </div>
-                            <button onClick={() => setSelectedTurretId(null)} className="text-[#a38580] hover:text-red-400 p-1 bg-black/30 rounded border border-white/5">
-                              ✕
-                            </button>
+                            <button onClick={() => setSelectedTurretId(null)} className="text-[#a38580] hover:text-red-400 p-1 bg-black/30 rounded border border-white/5">✕</button>
                           </div>
                           
                           <div className="grid grid-cols-3 gap-1 md:gap-2 text-[10px] md:text-xs">
@@ -246,7 +223,6 @@ export default function App() {
                               onClick={() => { sellTurret(selectedTurretId); setSelectedTurretId(null); }}
                               disabled={status !== 'playing'}
                               className="py-1.5 md:py-2 px-2 md:px-3 rounded font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all bg-red-900/60 hover:bg-red-700 text-red-300 border border-red-700/50 hover:text-white hover:border-red-500"
-                              title={`Vendre (+$${formatMoney(Math.floor(TOWER_CONFIGS[turret.type].cost * (Math.pow(1.5, turret.level) - 1)))})`}
                             >
                               VENDRE<br/>
                               <span className="text-[8px] text-red-400">${formatMoney(Math.floor(TOWER_CONFIGS[turret.type].cost * (Math.pow(1.5, turret.level) - 1)))}</span>
@@ -283,23 +259,13 @@ export default function App() {
                 <div className="bg-[#1c1a17]/95 backdrop-blur border border-[#3a352a] rounded-lg shadow-[0_5px_15px_rgba(0,0,0,0.5)] pointer-events-auto overflow-hidden">
                   <div className="px-3 py-2 border-b border-[#3a352a] flex items-center gap-2 bg-[#2a261f]">
                     <div className="w-1.5 h-1.5 bg-[#a3e635] rounded-sm animate-pulse shadow-[0_0_5px_rgba(163,230,53,0.8)]"></div>
-                    <span className="text-[#a3e635] font-mono text-[9px] md:text-[10px] tracking-widest uppercase font-bold drop-shadow-[0_0_2px_rgba(163,230,53,0.5)]">
-                      SÉLECTIONNEZ UNE ZONE
-                    </span>
+                    <span className="text-[#a3e635] font-mono text-[9px] md:text-[10px] tracking-widest uppercase font-bold drop-shadow-[0_0_2px_rgba(163,230,53,0.5)]">SÉLECTIONNEZ UNE ZONE</span>
                   </div>
                   <div className="px-3 py-2">
-                    <p className="text-[10px] md:text-[11px] text-[#e8dcc4] font-medium leading-relaxed">
-                      {TOWER_CONFIGS[selectedTower].desc}
-                    </p>
+                    <p className="text-[10px] md:text-[11px] text-[#e8dcc4] font-medium leading-relaxed">{TOWER_CONFIGS[selectedTower].desc}</p>
                     <div className="mt-2 flex items-center gap-3 text-[9px] font-mono text-[#a38580] uppercase tracking-wider">
-                      <span className="flex items-center gap-1">
-                        Cibles: {TOWER_CONFIGS[selectedTower].targetsAir && TOWER_CONFIGS[selectedTower].targetsGround ? 'SOL/AIR' : TOWER_CONFIGS[selectedTower].targetsAir ? 'AIR' : 'SOL'}
-                      </span>
-                      {TOWER_CONFIGS[selectedTower].armorPiercing && (
-                        <span className="flex items-center gap-1 text-orange-400">
-                          PERCE-BLINDAGE
-                        </span>
-                      )}
+                      <span>Cibles: {TOWER_CONFIGS[selectedTower].targetsAir && TOWER_CONFIGS[selectedTower].targetsGround ? 'SOL/AIR' : TOWER_CONFIGS[selectedTower].targetsAir ? 'AIR' : 'SOL'}</span>
+                      {TOWER_CONFIGS[selectedTower].armorPiercing && <span className="text-orange-400">PERCE-BLINDAGE</span>}
                     </div>
                   </div>
                 </div>
@@ -310,11 +276,8 @@ export default function App() {
           </div>
 
           <div className="flex flex-col relative bg-[#1c1a17]/95 backdrop-blur-md border-[2px] border-[#3a352a] shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded-xl p-3 md:p-4 pointer-events-auto max-w-full mx-auto w-max mb-2 md:mb-6">
-            {/* Tactical Decor Lines */}
             <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#fb923c] to-transparent opacity-50"></div>
             <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#fb923c] to-transparent opacity-30"></div>
-            
-            {/* Corner Brackets */}
             <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-orange-500 rounded-tl-lg"></div>
             <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-orange-500 rounded-tr-lg"></div>
             <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-orange-500 rounded-bl-lg"></div>
@@ -336,12 +299,7 @@ export default function App() {
               <motion.button
                 key={key}
                 whileTap={canAfford ? { scale: 0.95 } : {}}
-                onClick={() => {
-                  if (canAfford) {
-                    setSelectedTower(isSelected ? null : type);
-                    setSelectedTurretId(null);
-                  }
-                }}
+                onClick={() => { if (canAfford) { setSelectedTower(isSelected ? null : type); setSelectedTurretId(null); } }}
                 className={`group relative w-16 h-20 md:w-24 md:h-[6.5rem] rounded bg-gradient-to-b flex flex-col items-center justify-between p-1.5 transition-all flex-shrink-0 overflow-hidden ${
                   isSelected 
                       ? 'from-[#3a2814] to-[#1a1105] border-[1.5px] border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.3)] z-10 -translate-y-1' 
@@ -350,10 +308,7 @@ export default function App() {
                         : 'from-[#1a1815] to-[#0a0907] border border-[#2a241c] opacity-60 cursor-not-allowed grayscale-[0.5]'
                 }`}
               >
-                {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:8px_8px] pointer-events-none"></div>
-
-                {/* Top: Icon Container */}
                 <div className={`relative mt-1 w-8 h-8 md:w-11 md:h-11 rounded-full flex items-center justify-center z-10 transition-colors ${isSelected ? 'bg-orange-950/50 shadow-[inset_0_0_10px_rgba(249,115,22,0.2)]' : 'bg-black/60 group-hover:bg-black/40'}`}>
                   <div className="flex items-center justify-center">
                     {type === 'mitrailleuse' && <Crosshair className="w-3.5 h-3.5 md:w-5 md:h-5 text-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)]" />}
@@ -363,29 +318,19 @@ export default function App() {
                     {type === 'dca' && <Target className="w-3.5 h-3.5 md:w-5 md:h-5 text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]" />}
                   </div>
                 </div>
-                
-                {/* Bottom: Name & Cost */}
                 <div className="flex flex-col items-center w-full relative z-10 mt-auto mb-0.5">
                   <span className={`text-[7px] md:text-[9px] font-bold uppercase tracking-widest mb-1 truncate w-full text-center ${isSelected ? 'text-orange-400 drop-shadow-[0_0_2px_rgba(249,115,22,0.8)]' : 'text-[#d4c3a3] group-hover:text-white'}`}>{config.name.split(' ')[0]}</span>
-                  <div className={`flex items-center justify-center w-full px-1 py-[3px] rounded block text-[8px] md:text-[10px] font-mono tracking-wider font-bold ${isSelected ? 'bg-orange-600 text-white shadow-[0_2px_5px_rgba(0,0,0,0.5)]' : canAfford ? 'text-[#a3e635] bg-[#142e14] border border-[#2e5c2e]' : 'text-red-600 bg-[#2e1414] border border-[#5c2e2e]'}`}>
+                  <div className={`flex items-center justify-center w-full px-1 py-[3px] rounded block text-[8px] md:text-[10px] font-mono tracking-wider font-bold ${isSelected ? 'bg-orange-600 text-white shadow-[0_2px_5px_rgba(0,0,0,0.5)]' : canAfford ? 'text-[#a3e635] bg-[#142e14] border border-[#2e5c2e]' : 'text-red-600 bg-[#2e1414] border border-[#5c2e2e]'}` }>
                     ${formatMoney(config.cost)}
                   </div>
                 </div>
-
-                {/* Target Indicators */}
                 <div className="absolute top-1 left-1 flex flex-col gap-0.5 opacity-70">
-                   {config.targetsAir && (
-                     <div className="w-1 h-1 bg-cyan-400 rounded-full shadow-[0_0_3px_rgba(34,211,238,0.8)]" title="Cible Aérienne">
-                     </div>
-                   )}
-                   {config.targetsGround && (
-                     <div className="w-1 h-1 bg-orange-400 rounded-sm shadow-[0_0_3px_rgba(251,146,60,0.8)]" title="Cible Terrestre">
-                     </div>
-                   )}
+                   {config.targetsAir && <div className="w-1 h-1 bg-cyan-400 rounded-full shadow-[0_0_3px_rgba(34,211,238,0.8)]"></div>}
+                   {config.targetsGround && <div className="w-1 h-1 bg-orange-400 rounded-sm shadow-[0_0_3px_rgba(251,146,60,0.8)]"></div>}
                 </div>
                 {config.armorPiercing && (
                   <div className="absolute top-1 right-1 opacity-70">
-                    <div className="w-0 h-0 border-l-[2.5px] border-r-[2.5px] border-b-[3px] border-l-transparent border-r-transparent border-b-yellow-400 drop-shadow-[0_0_3px_rgba(250,204,21,0.8)]" title="Perce-Armure"></div>
+                    <div className="w-0 h-0 border-l-[2.5px] border-r-[2.5px] border-b-[3px] border-l-transparent border-r-transparent border-b-yellow-400 drop-shadow-[0_0_3px_rgba(250,204,21,0.8)]"></div>
                   </div>
                 )}
               </motion.button>
@@ -394,14 +339,9 @@ export default function App() {
             
             <div className="w-[1.5px] h-16 md:h-20 bg-gradient-to-b from-transparent via-[#4a4031] to-transparent mx-1 md:mx-3"></div>
 
-             {/* Airstrike Special Ability */}
              <motion.button
                 whileTap={airstrikeReady ? { scale: 0.95 } : {}}
-                onClick={() => {
-                  if (airstrikeReady) {
-                    callAirstrike();
-                  }
-                }}
+                onClick={() => { if (airstrikeReady) { callAirstrike(); } }}
                 className={`group relative w-16 h-20 md:w-24 md:h-[6.5rem] rounded bg-gradient-to-b flex flex-col items-center justify-between p-1.5 transition-all flex-shrink-0 overflow-hidden ${
                   airstrikeReady
                     ? 'from-[#3a1a14] to-[#1a0a05] border-[1.5px] border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)]'
@@ -409,21 +349,14 @@ export default function App() {
                 }`}
               >
                 <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:8px_8px] pointer-events-none"></div>
-
                 {!airstrikeAvailable && (
                   <div className="absolute inset-0 bg-black/70 z-20 flex items-center justify-center backdrop-blur-[1px]">
                      <span className="text-[9px] md:text-[10px] font-bold text-red-600 border border-red-900 bg-black/80 px-2 py-0.5 rounded -rotate-[20deg] block uppercase font-mono shadow-[0_0_10px_rgba(220,38,38,0.3)] tracking-widest">Vague 5</span>
                   </div>
                 )}
-                
-                {/* Top: Icon */}
                 <div className={`relative mt-1 w-8 h-8 md:w-11 md:h-11 rounded-full flex items-center justify-center z-10 transition-colors ${airstrikeReady ? 'bg-red-950/50 shadow-[inset_0_0_10px_rgba(239,68,68,0.2)]' : 'bg-black/60'}`}>
-                  <div className="flex items-center justify-center relative">
-                     <Plane className={`w-3.5 h-3.5 md:w-5 md:h-5 ${airstrikeReady ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)]' : 'text-stone-500'}`} />
-                  </div>
+                  <Plane className={`w-3.5 h-3.5 md:w-5 md:h-5 ${airstrikeReady ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)]' : 'text-stone-500'}`} />
                 </div>
-                
-                {/* Bottom: Name & Cooldown */}
                 <div className="flex flex-col items-center w-full relative z-10 mt-auto mb-0.5">
                   <span className={`text-[7px] md:text-[9px] font-bold uppercase tracking-widest mb-1 truncate w-full text-center ${airstrikeReady ? 'text-red-400 drop-shadow-[0_0_3px_rgba(239,68,68,0.8)]' : 'text-[#a38580]'}`}>FRAPPE</span>
                   <div className={`flex items-center justify-center w-full px-1 py-[3px] rounded block text-[8px] md:text-[10px] font-mono tracking-wider font-bold ${airstrikeReady ? 'text-white bg-red-600 shadow-[0_2px_5px_rgba(0,0,0,0.5)]' : 'text-[#a38580] bg-[#2a1310] border border-[#5c2a23]'}`}>
