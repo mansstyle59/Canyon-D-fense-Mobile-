@@ -1,6 +1,8 @@
 
 import { motion } from 'motion/react';
+import { useState } from 'react';
 import { GameState, TowerType, Enemy } from '../types';
+import { TOWER_CONFIGS } from '../constants';
 
 export const GameBoard = ({ 
   gameState, 
@@ -34,6 +36,8 @@ export const GameBoard = ({
       { id: '14', x: 520, y: 580 },  // Below bottom road middle
       { id: '15', x: 700, y: 560 },  // Below bottom road right (moved to avoid Airfield planes at 800, 540)
     ];
+
+    const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
 
     return (
         <div className="relative w-full h-full bg-[#1b1712] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#2a241c] via-[#1b1712] to-[#0a0806] overflow-hidden flex items-center justify-center touch-none select-none" onClick={() => { setSelectedTower(null); setSelectedTurretId(null); }}>
@@ -230,10 +234,16 @@ export const GameBoard = ({
                 <g key={enemy.id} transform={`translate(${enemy.x}, ${enemy.y}) rotate(${enemy.rotation || 0})`}>
                   
                   {/* Health Bar */}
-                  <g transform={`rotate(${-(enemy.rotation || 0)}) translate(-15, -25)`}>
-                    <rect width="30" height="4" fill="#111" rx="2" />
-                    <rect width={30 * (enemy.hp / enemy.maxHp)} height="4" fill="#f97316" rx="2" />
-                  </g>
+                  {(() => {
+                    const ratio = enemy.hp / enemy.maxHp;
+                    const hpColor = ratio > 0.6 ? '#22c55e' : ratio > 0.3 ? '#facc15' : '#ef4444';
+                    return (
+                      <g transform={`rotate(${-(enemy.rotation || 0)}) translate(-15, -25)`}>
+                        <rect width="30" height="4" fill="#111" rx="2" />
+                        <rect width={30 * ratio} height="4" fill={hpColor} rx="2" />
+                      </g>
+                    );
+                  })()}
 
                   {/* Enemy Visuals based on Type */}
                   {enemy.type === 'jeep' && (
@@ -437,12 +447,11 @@ export const GameBoard = ({
                   )}
 
                   {enemy.type === 'stealth_heli' && (
-                    <motion.g 
+                    <motion.g
                       initial={{ scale: 1.1 }}
-                      animate={{ scale: [1.1, 1.15, 1.1] }} 
-                      transition={{ duration: 0.5, repeat: Infinity }}
+                      animate={{ scale: [1.1, 1.15, 1.1], opacity: [0.45, 0.55, 0.45] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
                       filter="url(#unitShadow)"
-                      className="opacity-90"
                     >
                       {/* Body */}
                       <path d="M -14 -6 L 18 -5 L 24 0 L 18 5 L -14 6 Z" fill="#0f172a" stroke="#000" strokeWidth="1.5" />
@@ -525,6 +534,16 @@ export const GameBoard = ({
                       transition={{ duration: 0.8, repeat: Infinity }}
                       filter="url(#unitShadow)"
                     >
+                      {/* Boss warning aura */}
+                      <motion.circle
+                        cx="0" cy="0" r="50"
+                        fill="none"
+                        stroke="#ef4444"
+                        strokeWidth="2"
+                        animate={{ r: [44, 56, 44], opacity: [0.5, 0.15, 0.5] }}
+                        transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                      <circle cx="0" cy="0" r="40" fill="#ef4444" fillOpacity="0.06" />
                       {/* Mech Legs */}
                       <path d="M 0 0 L -8 -12 L -14 -12" fill="none" stroke="url(#metal)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
                       <path d="M 0 0 L -8 12 L -14 12" fill="none" stroke="url(#metal)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
@@ -556,27 +575,42 @@ export const GameBoard = ({
 
               {/* Render Projectiles */}
               {gameState.projectiles.map(proj => {
-                 let projColor = "#fff";
-                 if (proj.towerType === 'mitrailleuse') projColor = "#f97316"; // Green
-                 else if (proj.towerType === 'canon') projColor = "#3b82f6"; // Blue
-                 else if (proj.towerType === 'mortier') projColor = "#f97316"; // Orange
-                 else if (proj.towerType === 'dca') projColor = "#06b6d4"; // Cyan
-                 else projColor = "#ef4444"; // Red
-
+                 const angle = Math.atan2(proj.targetY - proj.y, proj.targetX - proj.x) * (180 / Math.PI);
                  return (
-                  <g key={proj.id} transform={`translate(${proj.x}, ${proj.y})`}>
-                     <circle cx="0" cy="0" r="3" fill={projColor} filter="url(#neonGlow)" />
-                     <motion.circle 
-                       initial={{ r: 0, opacity: 1 }}
-                       animate={{ r: 10, opacity: 0 }}
-                       transition={{ duration: 0.3 }}
-                       fill={projColor} 
-                     />
+                  <g key={proj.id} transform={`translate(${proj.x}, ${proj.y}) rotate(${angle})`}>
+                    {proj.towerType === 'mitrailleuse' && (
+                      <rect x="-7" y="-1.5" width="14" height="3" rx="1.5" fill="#f97316" filter="url(#neonGlow)" />
+                    )}
+                    {proj.towerType === 'canon' && (
+                      <>
+                        <rect x="-10" y="-2.5" width="10" height="5" rx="1" fill="#1d4ed8" />
+                        <circle cx="3" cy="0" r="5" fill="#3b82f6" filter="url(#neonGlow)" />
+                      </>
+                    )}
+                    {proj.towerType === 'mortier' && (
+                      <>
+                        <circle cx="0" cy="0" r="7" fill="#f59e0b" filter="url(#neonGlow)" opacity="0.9" />
+                        <circle cx="0" cy="0" r="3" fill="#1c0a00" />
+                      </>
+                    )}
+                    {proj.towerType === 'dca' && (
+                      <>
+                        <rect x="-12" y="-1" width="10" height="2" rx="1" fill="#06b6d4" opacity="0.5" />
+                        <rect x="-2" y="-1.5" width="14" height="3" rx="1.5" fill="#06b6d4" filter="url(#neonGlow)" />
+                      </>
+                    )}
+                    {proj.towerType === 'missile' && (
+                      <>
+                        <rect x="-14" y="-1" width="10" height="2" rx="1" fill="#f97316" opacity="0.4" />
+                        <rect x="-4" y="-2.5" width="14" height="5" rx="2" fill="#7f1d1d" />
+                        <polygon points="10,-3 16,0 10,3" fill="#ef4444" filter="url(#neonGlow)" />
+                      </>
+                    )}
                   </g>
                  );
               })}
               
-              {/* Range ring for selected turret */}
+              {/* Range ring for selected/built turret */}
               {selectedTurretId && gameState.turrets[selectedTurretId] && (() => {
                 const t = gameState.turrets[selectedTurretId];
                 return (
@@ -593,8 +627,41 @@ export const GameBoard = ({
                 );
               })()}
 
-              {/* Perfectly Aligned Turret Placements inside SVG coordinate space */}
-              {/* Allow clicking on these elements since the svg itself ignores pointer events */}
+              {/* Range preview ring for hovered empty slot */}
+              {selectedTower && hoveredSlotId && !gameState.turrets[hoveredSlotId] && (() => {
+                const slot = TURRET_SLOTS.find(s => s.id === hoveredSlotId);
+                if (!slot) return null;
+                const range = TOWER_CONFIGS[selectedTower].range;
+                return (
+                  <circle
+                    cx={slot.x}
+                    cy={slot.y}
+                    r={range}
+                    fill="rgba(255,255,255,0.05)"
+                    stroke="rgba(255,255,255,0.35)"
+                    strokeWidth="1.5"
+                    strokeDasharray="6 4"
+                    pointerEvents="none"
+                  />
+                );
+              })()}
+
+              {/* Ghost range rings for all empty slots when tower selected */}
+              {selectedTower && TURRET_SLOTS.filter(s => !gameState.turrets[s.id] && s.id !== hoveredSlotId).map(slot => (
+                <circle
+                  key={`ghost-${slot.id}`}
+                  cx={slot.x}
+                  cy={slot.y}
+                  r={TOWER_CONFIGS[selectedTower].range}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.06)"
+                  strokeWidth="1"
+                  strokeDasharray="4 6"
+                  pointerEvents="none"
+                />
+              ))}
+
+              {/* Turret Placements */}
               <g className="pointer-events-auto">
                 {TURRET_SLOTS.map(slot => {
                   const turret = gameState.turrets[slot.id];
@@ -607,29 +674,34 @@ export const GameBoard = ({
                   }
 
                   return (
-                    <TurretSlot 
-                      key={slot.id} 
-                      x={slot.x} 
-                      y={slot.y} 
-                      type={turret ? turret.type : 'build'} 
-                      level={turret?.level}
-                      rotation={rotation}
-                      disabledUntil={turret?.disabledUntil}
-                      selected={selectedTurretId === slot.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!turret) {
-                          if (selectedTower) {
-                            buildTurret(slot.id, slot.x, slot.y, selectedTower);
+                    <g
+                      key={slot.id}
+                      onMouseEnter={() => setHoveredSlotId(slot.id)}
+                      onMouseLeave={() => setHoveredSlotId(null)}
+                    >
+                      <TurretSlot
+                        x={slot.x}
+                        y={slot.y}
+                        type={turret ? turret.type : 'build'}
+                        level={turret?.level}
+                        rotation={rotation}
+                        disabledUntil={turret?.disabledUntil}
+                        selected={selectedTurretId === slot.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!turret) {
+                            if (selectedTower) {
+                              buildTurret(slot.id, slot.x, slot.y, selectedTower);
+                            }
+                            setSelectedTurretId(null);
+                          } else {
+                            setSelectedTurretId(slot.id);
+                            setSelectedTower(null);
                           }
-                          setSelectedTurretId(null);
-                        } else {
-                          setSelectedTurretId(slot.id);
-                          setSelectedTower(null);
-                        }
-                      }}
-                    />
-                  )
+                        }}
+                      />
+                    </g>
+                  );
                 })}
               </g>
 
@@ -725,7 +797,7 @@ function TurretSlot({ x, y, type, level, rotation = 0, disabledUntil = 0, select
   let accentColor = "#ef4444";
   if (type === 'mitrailleuse') accentColor = "#f97316";
   else if (type === 'canon') accentColor = "#3b82f6";
-  else if (type === 'mortier') accentColor = "#f97316";
+  else if (type === 'mortier') accentColor = "#f59e0b";
   else if (type === 'dca') accentColor = "#06b6d4";
 
   const isDisabled = disabledUntil > performance.now();
@@ -805,10 +877,11 @@ function TurretSlot({ x, y, type, level, rotation = 0, disabledUntil = 0, select
         )}
         {type === 'mortier' && (
            <g>
-             <circle cx="0" cy="0" r="12" fill="#431407" stroke={accentColor} strokeWidth="2" />
+             <circle cx="0" cy="0" r="12" fill="#451a03" stroke={accentColor} strokeWidth="2" />
              <circle cx="0" cy="0" r="6" fill="#000" />
-             <rect x="-14" y="-2" width="28" height="4" fill="#111" />
-             <rect x="-2" y="-14" width="4" height="28" fill="#111" />
+             <rect x="-14" y="-2" width="28" height="4" fill="#78350f" opacity="0.8" />
+             <rect x="-2" y="-14" width="4" height="28" fill="#78350f" opacity="0.8" />
+             <circle cx="0" cy="0" r="2" fill={accentColor} opacity="0.7" />
            </g>
         )}
         {type === 'missile' && (
