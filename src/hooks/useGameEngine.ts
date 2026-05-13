@@ -79,6 +79,7 @@ export function useGameEngine() {
   const lastTimeRef = useRef<number>(performance.now());
   const requestRef = useRef<number>(0);
   const waveDataRef = useRef({ spawned: 0, timeSinceLastSpawn: 0 });
+  const pendingAirstrikeRef = useRef(false);
 
   const toggleSpeed = useCallback(() => {
     setSpeedMultiplier(prev => {
@@ -164,6 +165,13 @@ export function useGameEngine() {
     let { money, lives, wave, enemies, turrets, projectiles, waveActive } = state;
     let newStatus = state.status;
     let waveCompleted = false;
+
+    // Apply pending airstrike damage (triggered by callAirstrike via ref)
+    if (pendingAirstrikeRef.current) {
+      pendingAirstrikeRef.current = false;
+      enemies.forEach(e => { if (e.hp - 1000 <= 0 && !e.isBoss) money += e.reward; });
+      enemies = enemies.map(e => ({ ...e, hp: e.hp - 1000 })).filter(e => e.hp > 0);
+    }
 
     // 1. Spawning enemies
     const currentWaves = wavesRef.current;
@@ -408,30 +416,16 @@ export function useGameEngine() {
   }, [updateGame]);
 
   const callAirstrike = useCallback(() => {
-    setGameState(prev => {
-      if (prev.status !== 'playing') return prev;
-      if (prev.wave < 5) return prev;
-      if (Date.now() - prev.lastAirstrikeTime < 20000) return prev;
-
-      let moneyGained = 0;
-      prev.enemies.forEach(e => {
-        if (e.hp - 1000 <= 0 && !e.isBoss) {
-            moneyGained += e.reward;
-        }
-      });
-      const survivingEnemies = prev.enemies.map(e => ({
-          ...e,
-          hp: e.hp - 1000
-      })).filter(e => e.hp > 0);
-
-      return {
-        ...prev,
-        money: prev.money + moneyGained,
-        enemies: survivingEnemies,
-        lastAirstrikeTime: Date.now(),
-        activeAirstrikes: [...prev.activeAirstrikes, { id: Math.random().toString(), startTime: Date.now() }]
-      };
-    });
+    const state = stateRef.current;
+    if (state.status !== 'playing') return;
+    if (state.wave < 5) return;
+    if (Date.now() - state.lastAirstrikeTime < 20000) return;
+    pendingAirstrikeRef.current = true;
+    setGameState(prev => ({
+      ...prev,
+      lastAirstrikeTime: Date.now(),
+      activeAirstrikes: [...prev.activeAirstrikes, { id: Math.random().toString(), startTime: Date.now() }]
+    }));
   }, []);
 
   const togglePause = useCallback(() => {
