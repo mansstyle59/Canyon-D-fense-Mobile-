@@ -5,41 +5,75 @@ import { ENEMY_CONFIGS, TOWER_CONFIGS } from '../constants';
 
 const computeSellValue = (type: TowerType, level: number): number => {
   const baseCost = TOWER_CONFIGS[type].cost;
+  // Total invested = baseCost * sum(1.5^i, i=0..level-1) = baseCost * (1.5^level - 1) / 0.5
+  // Sell at 50% refund
   return Math.floor(baseCost * (Math.pow(1.5, level) - 1));
 };
 
 const getLevelWaves = (level: number) => {
   const numWaves = level * 10;
+  // Each level adds 50% more difficulty on top of wave scaling
+  const levelScale = 1 + (level - 1) * 0.5;
+
   return Array.from({ length: numWaves }).map((_, i) => {
     const waveNumber = i + 1;
     const isBossWave = waveNumber % 5 === 0;
-    
+
     if (isBossWave) {
+      // Wave 20, 40, 60… — solo mega mech boss
       if (waveNumber % 20 === 0) {
-        return { count: 1 + Math.floor(waveNumber / 20), type: 'mech', interval: 5, hpMult: 1.5 + (waveNumber * 0.3) } as any;
+        return {
+          count: 1 + Math.floor(waveNumber / 20),
+          type: 'mech' as any,
+          interval: 8,
+          hpMult: (2.5 + waveNumber * 0.12) * levelScale,
+        };
       }
+      // Wave 10, 30, 50… — heavy tank column
       if (waveNumber % 10 === 0) {
-         return { count: 1 + Math.floor(waveNumber / 10), type: 'heavy_tank', interval: 3, hpMult: 1.5 + (waveNumber * 0.5) } as any;
+        return {
+          count: 3 + Math.floor(waveNumber / 10),
+          type: 'heavy_tank' as any,
+          interval: 4,
+          hpMult: (2.0 + waveNumber * 0.08) * levelScale,
+        };
       }
+      // Wave 15, 45… — bomber squadron
       if (waveNumber % 15 === 0) {
-         return { count: 2 + Math.floor(waveNumber / 15), type: 'bomber', interval: 4, hpMult: 1.5 + (waveNumber * 0.4) } as any;
+        return {
+          count: 4 + Math.floor(waveNumber / 15),
+          type: 'bomber' as any,
+          interval: 2.5,
+          hpMult: (1.8 + waveNumber * 0.07) * levelScale,
+        };
       }
-      return { count: 3 + Math.floor(waveNumber / 5) * 2, type: 'jet', interval: 1.5, hpMult: 1.5 + (waveNumber * 0.5) } as any;
+      // Wave 5, 25, 35… — jet swarm
+      return {
+        count: 4 + Math.floor(waveNumber / 5) * 2,
+        type: 'jet' as any,
+        interval: 0.7,
+        hpMult: (1.2 + waveNumber * 0.05) * levelScale,
+      };
     }
-    
-    if (waveNumber < 5) {
-       const types = ['squad', 'jeep', 'buggy', 'motorcycle'];
-       return { count: 4 + waveNumber * 2, type: types[waveNumber - 1] || 'squad', interval: 1.8 - (waveNumber * 0.1), hpMult: 0.8 + (waveNumber * 0.1) } as any;
-    }
-    
-    let types = ['jeep', 'squad'];
-    if (waveNumber > 2) types.push('buggy', 'motorcycle');
-    if (waveNumber > 4) types.push('apc', 'medic_truck');
-    if (waveNumber > 6) types.push('tank', 'emp_drone');
-    if (waveNumber > 8) types.push('stealth_heli');
-    if (waveNumber > 12) types.push('heavy_tank');
-    
-    return { count: 8 + Math.floor(waveNumber * 1.5), type: types, interval: Math.max(0.5, 1.5 - (waveNumber * 0.03)), hpMult: 1.0 + (waveNumber * 0.15) };
+
+    // Normal waves: count 7 → 24 over 10 waves, interval 1.56s → 0.35s floor
+    const count = 6 + Math.floor(waveNumber * 1.8);
+    const interval = Math.max(0.35, 1.6 - waveNumber * 0.04);
+    // HP capped at 5.5× base to prevent bullet-sponge enemies
+    const hpMult = Math.min(5.5, 0.75 + waveNumber * 0.12) * levelScale;
+
+    // Gradual enemy type introduction
+    const types: string[] = ['squad', 'jeep'];
+    if (waveNumber >= 2) types.push('motorcycle');
+    if (waveNumber >= 3) types.push('buggy');
+    if (waveNumber >= 6) types.push('apc');
+    if (waveNumber >= 7) types.push('medic_truck');
+    if (waveNumber >= 8) types.push('emp_drone');
+    if (waveNumber >= 9) types.push('tank');
+    if (waveNumber >= 11) types.push('stealth_heli');
+    if (waveNumber >= 14) types.push('heavy_tank');
+
+    return { count, type: types as any, interval, hpMult };
   });
 };
 
@@ -51,7 +85,7 @@ export function useGameEngine() {
     const savedLevel = parseInt(localStorage.getItem('defense_level') || '1', 10);
     const waves = getLevelWaves(savedLevel);
     return {
-      money: 300 + (savedLevel * 50),
+      money: 250 + (savedLevel * 100),
       lives: 10,
       level: savedLevel,
       wave: 1,
@@ -152,6 +186,7 @@ export function useGameEngine() {
 
     const state = stateRef.current;
     
+    // Quick escape if not playing
     if (state.status !== 'playing') {
       requestRef.current = requestAnimationFrame(updateGame);
       return;
@@ -161,7 +196,7 @@ export function useGameEngine() {
     let newStatus = state.status;
     let waveCompleted = false;
 
-    // Apply pending airstrike damage inside the game loop so it isn't overwritten
+    // Apply pending airstrike damage (triggered by callAirstrike via ref)
     if (pendingAirstrikeRef.current) {
       pendingAirstrikeRef.current = false;
       enemies.forEach(e => { if (e.hp - 1000 <= 0 && !e.isBoss) money += e.reward; });
@@ -205,7 +240,8 @@ export function useGameEngine() {
         }];
       }
     } else if (waveActive && enemies.length === 0 && waveDataRef.current.spawned >= (currentWaveInfo?.count ?? 0)) {
-       const waveBonus = 50 + wave * 25;
+       // Wave completed — award bonus
+       const waveBonus = 75 + wave * 30;
        money += waveBonus;
        waveActive = false;
        if (wave < currentWaves.length) {
@@ -224,6 +260,7 @@ export function useGameEngine() {
       const nextProgress = enemy.progress + enemy.speed * deltaTime;
       
       if (nextProgress >= totalPathLength && totalPathLength > 0) {
+        // Enemy reached base
         if (enemy.isBoss) {
           lives -= 5;
         } else if (enemy.maxHp > 800) {
@@ -240,6 +277,7 @@ export function useGameEngine() {
         const pt = getPointOnPath(nextProgress);
         let rotation = enemy.rotation;
         
+        // update rotation if moving
         if (pt.x !== enemy.x || pt.y !== enemy.y) {
            rotation = Math.atan2(pt.y - enemy.y, pt.x - enemy.x) * (180 / Math.PI);
         }
@@ -259,6 +297,7 @@ export function useGameEngine() {
     const newProjectiles = [...projectiles];
     const updatedTurrets = { ...turrets };
     
+    // Process EMP drones and Medics
     for (const enemy of enemies) {
       if (enemy.canDisableTurrets) {
         Object.values(updatedTurrets).forEach((t: any) => {
@@ -286,6 +325,7 @@ export function useGameEngine() {
       
       const dist = (e: Enemy) => Math.sqrt(Math.pow(e.x - turret.x, 2) + Math.pow(e.y - turret.y, 2));
 
+      // Find targets in range
       let target = enemies.find(e => e.id === turret.targetId);
       
       const isValidTarget = (e: Enemy) => {
@@ -380,6 +420,7 @@ export function useGameEngine() {
       }
     }
     
+    // Cleanup old airstrikes
     const now = Date.now();
     const activeAirstrikes = state.activeAirstrikes.filter(a => now - a.startTime < 4000);
 
