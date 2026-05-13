@@ -20,21 +20,27 @@ export const GameBoard = ({
   setSelectedTurretId: (id: string | null) => void
 }) => {
     const TURRET_SLOTS = [
-      { id: '1',  x: 50,  y: 50  },
-      { id: '2',  x: 200, y: 42  },
-      { id: '3',  x: 370, y: 50  },
-      { id: '4',  x: 375, y: 200 },
-      { id: '5',  x: 360, y: 315 },
-      { id: '6',  x: 205, y: 205 },
-      { id: '7',  x: 80,  y: 265 },
-      { id: '8',  x: 50,  y: 380 },
-      { id: '9',  x: 250, y: 390 },
-      { id: '10', x: 80,  y: 480 },
-      { id: '11', x: 255, y: 495 },
-      { id: '12', x: 365, y: 490 },
-      { id: '13', x: 365, y: 600 },
-      { id: '14', x: 190, y: 655 },
-      { id: '15', x: 50,  y: 695 },
+      // Segment 1 (top horizontal arc): turrets flanking each side
+      { id: '1',  x: 45,  y: 52  },  // left side, above road
+      { id: '2',  x: 148, y: 113 },  // center-left, below road
+      { id: '3',  x: 258, y: 42  },  // center, above road
+      { id: '4',  x: 315, y: 70  },  // right, above road
+      // Segment 2 (right vertical): turrets to the left of road
+      { id: '5',  x: 352, y: 182 },
+      { id: '6',  x: 345, y: 268 },
+      // Segment 3 (diagonal mid): turrets on both sides
+      { id: '7',  x: 305, y: 295 },  // upper-right of diagonal
+      { id: '8',  x: 248, y: 308 },  // inner side of bend
+      // Segment 4 corner (road turns right): turrets at the bend
+      { id: '9',  x: 132, y: 455 },  // south of seg3 end
+      { id: '10', x: 62,  y: 440 },  // west of seg4 start
+      // Segment 4 (sweeping right): turrets above road
+      { id: '11', x: 180, y: 475 },
+      { id: '12', x: 252, y: 493 },
+      // Segment 5 (bottom arc): turrets above road
+      { id: '13', x: 365, y: 530 },
+      { id: '14', x: 280, y: 583 },
+      { id: '15', x: 88,  y: 630 },
     ];
 
     const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
@@ -102,21 +108,143 @@ export const GameBoard = ({
                   <stop offset="50%" stopColor="#334155" />
                   <stop offset="100%" stopColor="#1e293b" />
                 </linearGradient>
-                {/* Topographical Line Patterns */}
-                <path id="topo1" d="M -50 180 Q 100 140 250 220 T 450 160" fill="none" stroke="rgba(249, 115, 22, 0.1)" strokeWidth="1.5" />
-                <path id="topo2" d="M -50 230 Q 100 190 250 270 T 450 210" fill="none" stroke="rgba(249, 115, 22, 0.07)" strokeWidth="1" />
-                <path id="topo3" d="M -50 480 Q 120 440 260 510 T 450 460" fill="none" stroke="rgba(249, 115, 22, 0.08)" strokeWidth="1" />
-                <path id="topo4" d="M -50 600 Q 130 560 280 620 T 450 580" fill="none" stroke="rgba(249, 115, 22, 0.1)" strokeWidth="1.5" />
-                <path id="topo5" d="M -50 650 Q 130 610 280 670 T 450 630" fill="none" stroke="rgba(249, 115, 22, 0.07)" strokeWidth="1" />
+                <linearGradient id="leftShadow" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#050200" stopOpacity="0.95" />
+                  <stop offset="100%" stopColor="#050200" stopOpacity="0" />
+                </linearGradient>
+                <linearGradient id="rightShadow" x1="100%" y1="0%" x2="0%" y2="0%">
+                  <stop offset="0%" stopColor="#050200" stopOpacity="0.95" />
+                  <stop offset="100%" stopColor="#050200" stopOpacity="0" />
+                </linearGradient>
+                <radialGradient id="craterGrad" cx="50%" cy="60%" r="50%">
+                  <stop offset="0%" stopColor="#0a0400" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#1a0a02" stopOpacity="0.7" />
+                </radialGradient>
+                {/* Topographical Line Patterns - spread across full canvas */}
+                <path id="topo1" d="M -50 88 Q 80 48 220 108 T 470 75" fill="none" stroke="rgba(249, 115, 22, 0.08)" strokeWidth="1.5" />
+                <path id="topo2" d="M -50 160 Q 100 120 245 178 T 470 142" fill="none" stroke="rgba(249, 115, 22, 0.06)" strokeWidth="1" />
+                <path id="topo3" d="M -50 338 Q 115 298 265 352 T 470 315" fill="none" stroke="rgba(249, 115, 22, 0.07)" strokeWidth="1" />
+                <path id="topo4" d="M -50 432 Q 100 395 255 448 T 470 412" fill="none" stroke="rgba(249, 115, 22, 0.09)" strokeWidth="1.5" />
+                <path id="topo5" d="M -50 698 Q 125 660 275 708 T 470 675" fill="none" stroke="rgba(249, 115, 22, 0.06)" strokeWidth="1" />
               </defs>
 
               <rect x="0" y="0" width="420" height="780" fill="url(#grid)" />
-              
+
+              {/* Topo contour lines */}
               <use href="#topo1" />
               <use href="#topo2" />
               <use href="#topo3" />
               <use href="#topo4" />
               <use href="#topo5" />
+
+              {/* Canyon edge vignette — suggests cliff walls on both sides */}
+              <rect x="0" y="0" width="48" height="780" fill="url(#leftShadow)" pointerEvents="none" />
+              <rect x="372" y="0" width="48" height="780" fill="url(#rightShadow)" pointerEvents="none" />
+
+              {/* Rock clusters — scattered off-road throughout the canyon */}
+              <g filter="url(#blackShadow)" opacity="0.82">
+                {/* A — upper-left, between road arc and left wall */}
+                <g transform="translate(22, 178)">
+                  <ellipse cx="0" cy="9" rx="22" ry="12" fill="#7a6045" />
+                  <ellipse cx="16" cy="4" rx="16" ry="9" fill="#6a5035" />
+                  <ellipse cx="-14" cy="6" rx="14" ry="8" fill="#8a7055" />
+                  <ellipse cx="5" cy="-1" rx="10" ry="6" fill="#5a4025" />
+                  <ellipse cx="-6" cy="-3" rx="7" ry="4" fill="#4a3018" />
+                </g>
+                {/* B — right canyon wall, mid-upper */}
+                <g transform="translate(402, 228)">
+                  <ellipse cx="0" cy="8" rx="18" ry="10" fill="#7a6045" />
+                  <ellipse cx="-14" cy="4" rx="13" ry="7" fill="#6a5035" />
+                  <ellipse cx="10" cy="3" rx="11" ry="6" fill="#8a7055" />
+                </g>
+                {/* C — left wall, below the road bend */}
+                <g transform="translate(15, 395)">
+                  <ellipse cx="0" cy="9" rx="20" ry="11" fill="#7a6045" />
+                  <ellipse cx="15" cy="4" rx="15" ry="8" fill="#6a5035" />
+                  <ellipse cx="-10" cy="5" rx="13" ry="7" fill="#8a7055" />
+                  <ellipse cx="6" cy="-1" rx="9" ry="5" fill="#5a4025" />
+                </g>
+                {/* D — right wall, lower section */}
+                <g transform="translate(404, 618)">
+                  <ellipse cx="0" cy="8" rx="16" ry="9" fill="#7a6045" />
+                  <ellipse cx="-12" cy="4" rx="12" ry="7" fill="#6a5035" />
+                  <ellipse cx="9" cy="2" rx="11" ry="6" fill="#8a7055" />
+                </g>
+                {/* E — bottom left corner */}
+                <g transform="translate(18, 718)">
+                  <ellipse cx="0" cy="8" rx="18" ry="10" fill="#7a6045" />
+                  <ellipse cx="14" cy="3" rx="14" ry="8" fill="#6a5035" />
+                  <ellipse cx="-11" cy="5" rx="12" ry="7" fill="#8a7055" />
+                </g>
+                {/* F — upper right, near entry turn */}
+                <g transform="translate(402, 118)">
+                  <ellipse cx="0" cy="7" rx="15" ry="8" fill="#7a6045" />
+                  <ellipse cx="-11" cy="3" rx="11" ry="6" fill="#6a5035" />
+                  <ellipse cx="8" cy="2" rx="9" ry="5" fill="#8a7055" />
+                </g>
+              </g>
+
+              {/* Battle craters */}
+              <g opacity="0.72">
+                {/* Crater 1 — top center */}
+                <g transform="translate(200, 158)">
+                  <ellipse cx="0" cy="5" rx="28" ry="19" fill="url(#craterGrad)" />
+                  <ellipse cx="0" cy="5" rx="28" ry="19" fill="none" stroke="#5a3810" strokeWidth="3" opacity="0.55" />
+                  <ellipse cx="0" cy="5" rx="36" ry="24" fill="none" stroke="#3a2208" strokeWidth="1.5" opacity="0.3" />
+                </g>
+                {/* Crater 2 — right side, mid */}
+                <g transform="translate(388, 390)">
+                  <ellipse cx="0" cy="4" rx="22" ry="15" fill="url(#craterGrad)" />
+                  <ellipse cx="0" cy="4" rx="22" ry="15" fill="none" stroke="#5a3810" strokeWidth="2.5" opacity="0.55" />
+                  <ellipse cx="0" cy="4" rx="29" ry="20" fill="none" stroke="#3a2208" strokeWidth="1.5" opacity="0.28" />
+                </g>
+                {/* Crater 3 — lower center */}
+                <g transform="translate(178, 636)">
+                  <ellipse cx="0" cy="5" rx="25" ry="17" fill="url(#craterGrad)" />
+                  <ellipse cx="0" cy="5" rx="25" ry="17" fill="none" stroke="#5a3810" strokeWidth="2.5" opacity="0.55" />
+                  <ellipse cx="0" cy="5" rx="32" ry="22" fill="none" stroke="#3a2208" strokeWidth="1.5" opacity="0.28" />
+                </g>
+                {/* Crater 4 — left mid area */}
+                <g transform="translate(28, 560)">
+                  <ellipse cx="0" cy="4" rx="19" ry="13" fill="url(#craterGrad)" />
+                  <ellipse cx="0" cy="4" rx="19" ry="13" fill="none" stroke="#5a3810" strokeWidth="2" opacity="0.5" />
+                  <ellipse cx="0" cy="4" rx="25" ry="17" fill="none" stroke="#3a2208" strokeWidth="1" opacity="0.25" />
+                </g>
+              </g>
+
+              {/* Dead desert shrubs */}
+              <g stroke="#5a4828" strokeLinecap="round" opacity="0.55">
+                <g transform="translate(390, 52)" strokeWidth="1.5">
+                  <line x1="0" y1="0" x2="-9" y2="-15" />
+                  <line x1="0" y1="0" x2="7" y2="-17" />
+                  <line x1="0" y1="0" x2="-15" y2="-8" />
+                  <line x1="0" y1="0" x2="13" y2="-7" />
+                  <line x1="0" y1="0" x2="1" y2="-20" />
+                  <circle cx="0" cy="0" r="3.5" fill="#3a2a0a" stroke="none" />
+                </g>
+                <g transform="translate(30, 318)" strokeWidth="1.5">
+                  <line x1="0" y1="0" x2="-8" y2="-13" />
+                  <line x1="0" y1="0" x2="9" y2="-14" />
+                  <line x1="0" y1="0" x2="-14" y2="-6" />
+                  <line x1="0" y1="0" x2="14" y2="-5" />
+                  <line x1="0" y1="0" x2="2" y2="-17" />
+                  <circle cx="0" cy="0" r="3" fill="#3a2a0a" stroke="none" />
+                </g>
+                <g transform="translate(60, 498)" strokeWidth="1.2">
+                  <line x1="0" y1="0" x2="-7" y2="-11" />
+                  <line x1="0" y1="0" x2="8" y2="-12" />
+                  <line x1="0" y1="0" x2="-12" y2="-5" />
+                  <line x1="0" y1="0" x2="11" y2="-6" />
+                  <circle cx="0" cy="0" r="2.5" fill="#3a2a0a" stroke="none" />
+                </g>
+                <g transform="translate(392, 665)" strokeWidth="1.5">
+                  <line x1="0" y1="0" x2="-8" y2="-14" />
+                  <line x1="0" y1="0" x2="6" y2="-15" />
+                  <line x1="0" y1="0" x2="-13" y2="-7" />
+                  <line x1="0" y1="0" x2="12" y2="-8" />
+                  <circle cx="0" cy="0" r="3" fill="#3a2a0a" stroke="none" />
+                </g>
+              </g>
 
               <g filter="url(#groundShadow)">
                 {/* Sand Border Base */}
@@ -130,10 +258,12 @@ export const GameBoard = ({
                       stroke="#c09861" strokeWidth="12" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
               </g>
 
-              {/* Army Base Camps & Decor */}
+              {/* Military Structures & Decor */}
               <g filter="url(#blackShadow)">
-                {/* Base Camp 1 (left side, mid-height) */}
+
+                {/* ── BASE CAMP 1 — left side, mid-height ── */}
                 <g transform="translate(100, 265) rotate(-12)">
+                  {/* Tents */}
                   <g transform="translate(0, 0)">
                     <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
                     <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
@@ -144,18 +274,72 @@ export const GameBoard = ({
                     <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
                     <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
                   </g>
+                  {/* Sandbag wall in front */}
+                  <g transform="translate(-5, 22)">
+                    <ellipse cx="-12" cy="0" rx="9" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="1" />
+                    <ellipse cx="0"   cy="0" rx="9" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="1" />
+                    <ellipse cx="12"  cy="0" rx="9" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="1" />
+                    <ellipse cx="-6"  cy="-6" rx="9" ry="5" fill="#7a6345" stroke="#5a4a30" strokeWidth="1" />
+                    <ellipse cx="6"   cy="-6" rx="9" ry="5" fill="#7a6345" stroke="#5a4a30" strokeWidth="1" />
+                  </g>
+                  {/* Fuel drums */}
+                  <g transform="translate(62, -6)">
+                    <rect x="-5" y="-14" width="10" height="22" rx="3" fill="#2d2d2d" stroke="#111" strokeWidth="1" />
+                    <line x1="-5" y1="-6" x2="5" y2="-6" stroke="#555" strokeWidth="1" />
+                    <line x1="-5" y1="2" x2="5" y2="2" stroke="#555" strokeWidth="1" />
+                    <circle cx="0" cy="-14" r="3" fill="#1a1a1a" stroke="#555" strokeWidth="0.5" />
+                    <rect x="7" y="-11" width="8" height="18" rx="2.5" fill="#8B0000" stroke="#111" strokeWidth="1" />
+                    <line x1="7" y1="-4" x2="15" y2="-4" stroke="#600" strokeWidth="0.8" />
+                    <line x1="7" y1="4" x2="15" y2="4" stroke="#600" strokeWidth="0.8" />
+                  </g>
+                  {/* Flagpole */}
+                  <g transform="translate(-28, -22)">
+                    <line x1="0" y1="0" x2="0" y2="-28" stroke="#888" strokeWidth="1.5" />
+                    <polygon points="0,-28 14,-23 0,-18" fill="#4b5320" />
+                  </g>
                 </g>
-                
-                {/* Checkpoint Barricade (center upper) */}
+
+                {/* ── CHECKPOINT BARRICADE — center upper ── */}
                 <g transform="translate(200, 188) rotate(5)">
+                  {/* Barrier pole */}
                   <rect x="-2" y="-25" width="4" height="50" fill="#64748b" />
                   <line x1="-2" y1="-25" x2="20" y2="0" stroke="#111" strokeWidth="1.5" />
                   <rect x="18" y="-4" width="5" height="8" fill="#475569" stroke="#111" />
+                  {/* Flag/pennant */}
                   <path d="M -8 -32 Q -4 -36 0 -32 Q 4 -36 8 -32 Q 12 -36 16 -32 L 16 -25 L -8 -25 Z" fill="#d4d4d8" stroke="#71717a" strokeWidth="1" />
                   <circle cx="4" cy="-29" r="3" fill="#3f3f46" />
+                  {/* Sandbags flanking checkpoint */}
+                  <g transform="translate(-28, 12)">
+                    <ellipse cx="0"  cy="0" rx="8" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="0.8" />
+                    <ellipse cx="10" cy="0" rx="8" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="0.8" />
+                    <ellipse cx="5"  cy="-5" rx="7" ry="4" fill="#7a6345" stroke="#5a4a30" strokeWidth="0.8" />
+                  </g>
+                  <g transform="translate(22, 12)">
+                    <ellipse cx="0"  cy="0" rx="8" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="0.8" />
+                    <ellipse cx="10" cy="0" rx="8" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="0.8" />
+                    <ellipse cx="5"  cy="-5" rx="7" ry="4" fill="#7a6345" stroke="#5a4a30" strokeWidth="0.8" />
+                  </g>
                 </g>
 
-                {/* Base Camp 2 (top right corner) */}
+                {/* ── WATCHTOWER — mid right canyon wall ── */}
+                <g transform="translate(405, 356)">
+                  {/* Legs */}
+                  <line x1="-10" y1="30" x2="-5" y2="-10" stroke="#5a4a30" strokeWidth="2.5" />
+                  <line x1="10"  y1="30" x2="5"  y2="-10" stroke="#5a4a30" strokeWidth="2.5" />
+                  <line x1="-10" y1="30" x2="5"  y2="-10" stroke="#5a4a30" strokeWidth="1.5" opacity="0.5" />
+                  <line x1="10"  y1="30" x2="-5" y2="-10" stroke="#5a4a30" strokeWidth="1.5" opacity="0.5" />
+                  {/* Platform */}
+                  <rect x="-14" y="-18" width="28" height="12" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5" />
+                  {/* Railing */}
+                  <line x1="-14" y1="-18" x2="-14" y2="-28" stroke="#3a4018" strokeWidth="1.5" />
+                  <line x1="14"  y1="-18" x2="14"  y2="-28" stroke="#3a4018" strokeWidth="1.5" />
+                  <line x1="-14" y1="-28" x2="14"  y2="-28" stroke="#3a4018" strokeWidth="1.5" />
+                  {/* Searchlight */}
+                  <circle cx="0" cy="-24" r="4" fill="#334155" stroke="#64748b" strokeWidth="1" />
+                  <polygon points="-3,-20 3,-20 8,4 -8,4" fill="#fef08a" opacity="0.15" />
+                </g>
+
+                {/* ── BASE CAMP 2 — top right ── */}
                 <g transform="translate(352, 62) rotate(15)">
                   <g transform="translate(0, 0)">
                     <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
@@ -167,13 +351,27 @@ export const GameBoard = ({
                     <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
                     <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
                   </g>
+                  {/* Ammo crates */}
+                  <g transform="translate(-46, 18)">
+                    <rect x="0" y="-8" width="14" height="10" fill="#3d4a1a" stroke="#2b3011" strokeWidth="1" rx="1" />
+                    <line x1="0" y1="-3" x2="14" y2="-3" stroke="#2b3011" strokeWidth="0.8" />
+                    <rect x="16" y="-6" width="12" height="8" fill="#3d4a1a" stroke="#2b3011" strokeWidth="1" rx="1" />
+                    <line x1="16" y1="-2" x2="28" y2="-2" stroke="#2b3011" strokeWidth="0.8" />
+                  </g>
+                  {/* Flagpole */}
+                  <g transform="translate(20, -28)">
+                    <line x1="0" y1="0" x2="0" y2="-24" stroke="#888" strokeWidth="1.5" />
+                    <polygon points="0,-24 12,-20 0,-16" fill="#4b5320" />
+                  </g>
                 </g>
 
-                {/* Airfield (bottom) */}
+                {/* ── AIRFIELD — bottom ── */}
                 <g transform="translate(290, 716)">
                   <rect x="-28" y="-18" width="56" height="36" fill="#3e451b" rx="4" stroke="#2b3011" strokeWidth="2"/>
                   <line x1="-28" y1="-8" x2="28" y2="-8" stroke="#2b3011" strokeWidth="2" />
                   <line x1="-28" y1="8" x2="28" y2="8" stroke="#2b3011" strokeWidth="2" />
+                  {/* Runway centerline dashes */}
+                  <line x1="0" y1="-18" x2="0" y2="-12" stroke="#6b7240" strokeWidth="1.5" strokeDasharray="3 2" />
                   <g transform="translate(-42, 26) rotate(-20)">
                     <path d="M-16,-3 L20,0 L-16,3 Z" fill="#64748b" stroke="#111" strokeWidth="1" />
                     <path d="M-4,-16 L8,0 L-4,16 Z" fill="#475569" stroke="#111" strokeWidth="1" />
@@ -184,7 +382,28 @@ export const GameBoard = ({
                     <path d="M-4,-16 L8,0 L-4,16 Z" fill="#475569" stroke="#111" strokeWidth="1" />
                     <circle cx="8" cy="0" r="2.5" fill="#0ea5e9" stroke="#111" strokeWidth="1" />
                   </g>
+                  {/* Fuel depot */}
+                  <g transform="translate(38, -6)">
+                    <rect x="-5" y="-12" width="10" height="18" rx="3" fill="#2d2d2d" stroke="#111" strokeWidth="1" />
+                    <line x1="-5" y1="-4" x2="5" y2="-4" stroke="#555" strokeWidth="1" />
+                    <rect x="7" y="-10" width="9" height="16" rx="2.5" fill="#8B0000" stroke="#111" strokeWidth="1" />
+                  </g>
                 </g>
+
+                {/* ── ABANDONED VEHICLE WRECK — canyon left ── */}
+                <g transform="translate(38, 228) rotate(18)" opacity="0.7">
+                  <rect x="-18" y="-9" width="36" height="18" rx="3" fill="#3a3020" stroke="#111" strokeWidth="1.5" />
+                  <rect x="-14" y="-7" width="20" height="14" rx="2" fill="#2a2018" stroke="#111" strokeWidth="1" />
+                  <rect x="-10" y="-9" width="8" height="4" rx="1" fill="#111" />
+                  <rect x="-10" y="5" width="8" height="4" rx="1" fill="#111" />
+                  <rect x="8" y="-9" width="6" height="4" rx="1" fill="#111" />
+                  <rect x="8" y="5" width="6" height="4" rx="1" fill="#111" />
+                  <rect x="12" y="-6" width="6" height="12" rx="1" fill="#1a1008" />
+                  {/* Rust/damage marks */}
+                  <line x1="-4" y1="-9" x2="2" y2="9" stroke="#5a3010" strokeWidth="1.5" opacity="0.6" />
+                  <line x1="6" y1="-9" x2="0" y2="9" stroke="#5a3010" strokeWidth="1" opacity="0.4" />
+                </g>
+
               </g>
 
               {/* Glowing Entry / Exit Portals */}
