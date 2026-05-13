@@ -5,8 +5,6 @@ import { ENEMY_CONFIGS, TOWER_CONFIGS } from '../constants';
 
 const computeSellValue = (type: TowerType, level: number): number => {
   const baseCost = TOWER_CONFIGS[type].cost;
-  // Total invested = baseCost * sum(1.5^i, i=0..level-1) = baseCost * (1.5^level - 1) / 0.5
-  // Sell at 50% refund
   return Math.floor(baseCost * (Math.pow(1.5, level) - 1));
 };
 
@@ -34,7 +32,6 @@ const getLevelWaves = (level: number) => {
        return { count: 4 + waveNumber * 2, type: types[waveNumber - 1] || 'squad', interval: 1.8 - (waveNumber * 0.1), hpMult: 0.8 + (waveNumber * 0.1) } as any;
     }
     
-    // As levels progress, we introduce harder units
     let types = ['jeep', 'squad'];
     if (waveNumber > 2) types.push('buggy', 'motorcycle');
     if (waveNumber > 4) types.push('apc', 'medic_truck');
@@ -42,7 +39,6 @@ const getLevelWaves = (level: number) => {
     if (waveNumber > 8) types.push('stealth_heli');
     if (waveNumber > 12) types.push('heavy_tank');
     
-    // Instead of selecting a single type, we return the array. The spawner will mix them.
     return { count: 8 + Math.floor(waveNumber * 1.5), type: types, interval: Math.max(0.5, 1.5 - (waveNumber * 0.03)), hpMult: 1.0 + (waveNumber * 0.15) };
   });
 };
@@ -79,6 +75,7 @@ export function useGameEngine() {
   const lastTimeRef = useRef<number>(performance.now());
   const requestRef = useRef<number>(0);
   const waveDataRef = useRef({ spawned: 0, timeSinceLastSpawn: 0 });
+  const pendingAirstrikeRef = useRef(false);
 
   const toggleSpeed = useCallback(() => {
     setSpeedMultiplier(prev => {
@@ -155,7 +152,6 @@ export function useGameEngine() {
 
     const state = stateRef.current;
     
-    // Quick escape if not playing
     if (state.status !== 'playing') {
       requestRef.current = requestAnimationFrame(updateGame);
       return;
@@ -164,6 +160,13 @@ export function useGameEngine() {
     let { money, lives, wave, enemies, turrets, projectiles, waveActive } = state;
     let newStatus = state.status;
     let waveCompleted = false;
+
+    // Apply pending airstrike damage inside the game loop so it isn't overwritten
+    if (pendingAirstrikeRef.current) {
+      pendingAirstrikeRef.current = false;
+      enemies.forEach(e => { if (e.hp - 1000 <= 0 && !e.isBoss) money += e.reward; });
+      enemies = enemies.map(e => ({ ...e, hp: e.hp - 1000 })).filter(e => e.hp > 0);
+    }
 
     // 1. Spawning enemies
     const currentWaves = wavesRef.current;
@@ -202,7 +205,6 @@ export function useGameEngine() {
         }];
       }
     } else if (waveActive && enemies.length === 0 && waveDataRef.current.spawned >= (currentWaveInfo?.count ?? 0)) {
-       // Wave completed — award bonus
        const waveBonus = 50 + wave * 25;
        money += waveBonus;
        waveActive = false;
@@ -222,7 +224,6 @@ export function useGameEngine() {
       const nextProgress = enemy.progress + enemy.speed * deltaTime;
       
       if (nextProgress >= totalPathLength && totalPathLength > 0) {
-        // Enemy reached base
         if (enemy.isBoss) {
           lives -= 5;
         } else if (enemy.maxHp > 800) {
@@ -239,7 +240,6 @@ export function useGameEngine() {
         const pt = getPointOnPath(nextProgress);
         let rotation = enemy.rotation;
         
-        // update rotation if moving
         if (pt.x !== enemy.x || pt.y !== enemy.y) {
            rotation = Math.atan2(pt.y - enemy.y, pt.x - enemy.x) * (180 / Math.PI);
         }
@@ -259,7 +259,6 @@ export function useGameEngine() {
     const newProjectiles = [...projectiles];
     const updatedTurrets = { ...turrets };
     
-    // Process EMP drones and Medics
     for (const enemy of enemies) {
       if (enemy.canDisableTurrets) {
         Object.values(updatedTurrets).forEach((t: any) => {
@@ -287,7 +286,6 @@ export function useGameEngine() {
       
       const dist = (e: Enemy) => Math.sqrt(Math.pow(e.x - turret.x, 2) + Math.pow(e.y - turret.y, 2));
 
-      // Find targets in range
       let target = enemies.find(e => e.id === turret.targetId);
       
       const isValidTarget = (e: Enemy) => {
@@ -382,7 +380,6 @@ export function useGameEngine() {
       }
     }
     
-    // Cleanup old airstrikes
     const now = Date.now();
     const activeAirstrikes = state.activeAirstrikes.filter(a => now - a.startTime < 4000);
 
@@ -408,30 +405,16 @@ export function useGameEngine() {
   }, [updateGame]);
 
   const callAirstrike = useCallback(() => {
-    setGameState(prev => {
-      if (prev.status !== 'playing') return prev;
-      if (prev.wave < 5) return prev;
-      if (Date.now() - prev.lastAirstrikeTime < 20000) return prev;
-
-      let moneyGained = 0;
-      prev.enemies.forEach(e => {
-        if (e.hp - 1000 <= 0 && !e.isBoss) {
-            moneyGained += e.reward;
-        }
-      });
-      const survivingEnemies = prev.enemies.map(e => ({
-          ...e,
-          hp: e.hp - 1000
-      })).filter(e => e.hp > 0);
-
-      return {
-        ...prev,
-        money: prev.money + moneyGained,
-        enemies: survivingEnemies,
-        lastAirstrikeTime: Date.now(),
-        activeAirstrikes: [...prev.activeAirstrikes, { id: Math.random().toString(), startTime: Date.now() }]
-      };
-    });
+    const state = stateRef.current;
+    if (state.status !== 'playing') return;
+    if (state.wave < 5) return;
+    if (Date.now() - state.lastAirstrikeTime < 20000) return;
+    pendingAirstrikeRef.current = true;
+    setGameState(prev => ({
+      ...prev,
+      lastAirstrikeTime: Date.now(),
+      activeAirstrikes: [...prev.activeAirstrikes, { id: Math.random().toString(), startTime: Date.now() }]
+    }));
   }, []);
 
   const togglePause = useCallback(() => {
