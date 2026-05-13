@@ -20,27 +20,21 @@ export const GameBoard = ({
   setSelectedTurretId: (id: string | null) => void
 }) => {
     const TURRET_SLOTS = [
-      // Segment 1 (top horizontal arc): turrets flanking each side
-      { id: '1',  x: 45,  y: 52  },  // left side, above road
-      { id: '2',  x: 148, y: 113 },  // center-left, below road
-      { id: '3',  x: 258, y: 42  },  // center, above road
-      { id: '4',  x: 315, y: 70  },  // right, above road
-      // Segment 2 (right vertical): turrets to the left of road
-      { id: '5',  x: 352, y: 182 },
-      { id: '6',  x: 345, y: 268 },
-      // Segment 3 (diagonal mid): turrets on both sides
-      { id: '7',  x: 305, y: 295 },  // upper-right of diagonal
-      { id: '8',  x: 248, y: 308 },  // inner side of bend
-      // Segment 4 corner (road turns right): turrets at the bend
-      { id: '9',  x: 132, y: 455 },  // south of seg3 end
-      { id: '10', x: 62,  y: 440 },  // west of seg4 start
-      // Segment 4 (sweeping right): turrets above road
-      { id: '11', x: 180, y: 475 },
-      { id: '12', x: 252, y: 493 },
-      // Segment 5 (bottom arc): turrets above road
-      { id: '13', x: 365, y: 530 },
-      { id: '14', x: 280, y: 583 },
-      { id: '15', x: 88,  y: 630 },
+      { id: '1',  x: 40,  y: 38  },
+      { id: '2',  x: 173, y: 26  },
+      { id: '3',  x: 333, y: 56  },
+      { id: '4',  x: 330, y: 188 },
+      { id: '5',  x: 318, y: 258 },
+      { id: '6',  x: 258, y: 285 },
+      { id: '7',  x: 159, y: 324 },
+      { id: '8',  x: 68,  y: 368 },
+      { id: '9',  x: 40,  y: 418 },
+      { id: '10', x: 57,  y: 476 },
+      { id: '11', x: 193, y: 450 },
+      { id: '12', x: 269, y: 482 },
+      { id: '13', x: 344, y: 502 },
+      { id: '14', x: 316, y: 543 },
+      { id: '15', x: 203, y: 641 },
     ];
 
     const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
@@ -49,10 +43,11 @@ export const GameBoard = ({
         <div className="relative w-full h-full bg-[#1b1712] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#2a241c] via-[#1b1712] to-[#0a0806] overflow-hidden flex items-center justify-center touch-none select-none" onClick={() => { setSelectedTower(null); setSelectedTurretId(null); }}>
             
             {/* SVG Interactive Ground Layer */}
-            <svg 
+            <svg
               className="w-full h-full max-w-full max-h-full pointer-events-none relative z-10"
               viewBox="0 0 420 780"
               preserveAspectRatio="xMidYMid meet"
+              style={{ transform: 'perspective(900px) rotateX(12deg)', transformOrigin: '50% 50%' }}
             >
               {/* Definitions for glows */}
               <defs>
