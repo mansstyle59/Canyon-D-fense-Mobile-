@@ -222,7 +222,7 @@ export default function App() {
       {/* ── Bottom Arsenal ── */}
       <div className="absolute bottom-0 left-0 right-0 z-40 bg-[#0d0b09]/96 backdrop-blur-xl border-t-2 border-[#1f1c17] shadow-[0_-4px_20px_rgba(0,0,0,0.6)]">
 
-        {/* Context strip */}
+        {/* Context strip (upgrade / placement hint) */}
         <AnimatePresence>
           {selectedTurretId && gameState.turrets[selectedTurretId] ? (() => {
             const turret = gameState.turrets[selectedTurretId];
@@ -315,6 +315,7 @@ export default function App() {
                   {config.targetsGround && <div className="w-[5px] h-[5px] rounded-sm bg-orange-400/80" />}
                 </div>
                 {config.armorPiercing && <div className="absolute top-1 right-1 text-[7px] font-black text-yellow-500/80">AP</div>}
+
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center mt-1 ${isSelected ? 'bg-orange-900/50' : 'bg-[#0a0907]'}`}>
                   {type === 'mitrailleuse' && <Crosshair className="w-[15px] h-[15px] text-green-400" />}
                   {type === 'canon' && <Zap className="w-[15px] h-[15px] text-orange-400" />}
@@ -322,9 +323,11 @@ export default function App() {
                   {type === 'missile' && <Rocket className="w-[15px] h-[15px] text-pink-400" />}
                   {type === 'dca' && <Target className="w-[15px] h-[15px] text-cyan-400" />}
                 </div>
+
                 <span className={`text-[6px] font-black uppercase tracking-widest text-center leading-tight px-0.5 ${isSelected ? 'text-orange-300' : canAfford ? 'text-[#b4a48a]' : 'text-[#3a352a]'}`}>
                   {config.name.split(' ')[0]}
                 </span>
+
                 <div className={`w-full text-center py-[2px] rounded-md text-[8px] font-mono font-black ${
                   isSelected ? 'bg-orange-500 text-white'
                     : canAfford ? 'bg-[#0e2010] text-green-400 border border-[#1a4020]/60'
@@ -351,6 +354,7 @@ export default function App() {
                 <span className="text-[7px] font-black text-red-900 uppercase -rotate-[15deg] border border-red-900/40 px-1 tracking-widest">V5+</span>
               </div>
             )}
+
             <div className="relative w-8 h-8 flex items-center justify-center mt-1">
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 32 32">
                 <circle cx="16" cy="16" r={circR} fill="none" stroke="#1a0a08" strokeWidth="2.5" />
@@ -365,7 +369,9 @@ export default function App() {
               </svg>
               <Plane className={`w-[14px] h-[14px] relative z-10 ${airstrikeReady ? 'text-red-400 drop-shadow-[0_0_6px_rgba(239,68,68,0.9)]' : 'text-red-900'}`} />
             </div>
+
             <span className={`text-[6px] font-black uppercase tracking-widest ${airstrikeReady ? 'text-red-300' : 'text-red-900'}`}>FRAPPE</span>
+
             <div className={`w-full text-center py-[2px] rounded-md text-[8px] font-mono font-black ${
               airstrikeReady ? 'bg-red-600 text-white border border-red-500/40'
                 : 'bg-[#150605] text-red-900 border border-[#2a0f08]/40'
