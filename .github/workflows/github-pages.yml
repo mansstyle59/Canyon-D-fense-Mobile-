@@ -27,6 +27,11 @@ jobs:
       - name: Build static site
         run: npm run build
 
+      - name: Set Git Identity
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
       - name: Create gh-pages branch (if not exists)
         run: |
           git fetch origin
