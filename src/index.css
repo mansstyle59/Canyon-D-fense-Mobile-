@@ -5,14 +5,40 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
   --animate-shimmer: shimmer 2s infinite linear;
+  --animate-blink: blink 1.5s infinite step-end;
+  --animate-grid-scan: grid-scan 10s linear infinite;
+
   @keyframes shimmer {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(200%); }
   }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  @keyframes grid-scan {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100%; }
+  }
+}
+
+.tactical-scanlines {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0.1) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+
+.tactical-vignette {
+  background: radial-gradient(circle, transparent 80%, rgba(0, 0, 0, 0.2) 100%);
+  pointer-events: none;
 }
 
 body {
-  @apply bg-[#050505] text-slate-100;
+  @apply bg-[#f4f4f5] text-zinc-900;
   -webkit-tap-highlight-color: transparent;
   touch-action: none;
   overscroll-behavior: none;

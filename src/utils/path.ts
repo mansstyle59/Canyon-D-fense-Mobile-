@@ -1,48 +1,85 @@
-export const SVG_PATH = "M -20 120 C 90 65 250 65 370 135 C 405 195 405 275 340 315 C 270 355 130 370 110 428 C 90 486 225 542 360 567 C 400 585 235 658 -20 682";
+export function getRawPathForLevel(level: number) {
+  // Use level to create a repeatable but unique seed for this level
+  const seed = (level * 1337) % 1000;
+  
+  // Base patterns (we define 8 distinct architectural archetypes)
+  const pattern = (level - 1) % 8;
+  
+  // Variation factors based on level (subtle shifts so every level 1, 9, 17 feel slightly different)
+  const shiftX = (Math.sin(level * 0.5) * 30);
+  const shiftY = (Math.cos(level * 0.7) * 20);
+  const intensity = 0.8 + (Math.sin(level) * 0.2);
 
-let cachedPathPoints: {x: number, y: number}[] | null = null;
-let pathLength = 0;
+  switch(pattern) {
+    case 0: // The Grand Corridor (S-Curve)
+      return `M 512 -120 L 512 100 C ${300 + shiftX} 100 ${300 + shiftX} 400 512 400 C ${724 + shiftY} 400 ${724 + shiftY} 700 512 700 L 512 1120`;
+    
+    case 1: // The Iron Zig-Zag
+      return `M 512 -120 L 512 150 L ${200 + shiftX} 150 L ${200 + shiftX} 500 L ${824 - shiftX} 500 L ${824 - shiftX} 850 L 512 850 L 512 1120`;
+    
+    case 2: // The Horseshoe Bypass
+      return `M 512 -120 L 512 100 L ${150 + shiftY} 100 L ${150 + shiftY} 900 L ${874 - shiftY} 900 L ${874 - shiftY} 100 L 512 100 L 512 1120`;
+    
+    case 3: // The Serpent's Coil
+      return `M 512 -120 C 512 200 ${100 + shiftX} 200 ${100 + shiftX} 400 C ${100 + shiftX} 600 924 600 924 800 C 924 1000 512 1000 512 1120`;
+    
+    case 4: // The Tactical Square
+      return `M 512 -120 L 512 200 L ${800 + shiftX} 200 L ${800 + shiftX} 800 L ${224 - shiftX} 800 L ${224 - shiftX} 500 L 512 500 L 512 1120`;
+    
+    case 5: // The Double Helix (Mirrored S)
+      return `M 512 -120 L 512 100 C ${100 + shiftX} 100 ${100 + shiftX} 300 512 300 C ${924 + shiftY} 300 ${924 + shiftY} 500 512 500 C ${100 + shiftX} 500 ${100 + shiftX} 700 512 700 C ${924 + shiftY} 700 ${924 + shiftY} 900 512 900 L 512 1120`;
 
-export function getPathPoints() {
-  if (cachedPathPoints) return { points: cachedPathPoints, length: pathLength };
+    case 6: // The Blitz Lane (Direct with sharp turns)
+      return `M 512 -120 L 512 250 L ${100 + shiftY} 250 L ${100 + shiftY} 350 L ${924 - shiftY} 350 L ${924 - shiftY} 650 L ${100 + shiftY} 650 L ${100 + shiftY} 750 L 512 750 L 512 1120`;
+
+    case 7: // The Omega Loop
+      return `M 512 -120 L 512 150 C ${900 + shiftX} 150 ${900 + shiftX} 850 512 850 C ${124 - shiftX} 850 ${124 - shiftX} 150 512 150 L 512 1120`;
+
+    default:
+      return "M 512 -120 L 512 1120";
+  }
+}
+
+let cachedPathPoints: { [level: number]: { points: {x: number, y: number}[], length: number } } = {};
+
+export function getPathPoints(level: number = 1) {
+  if (cachedPathPoints[level]) return cachedPathPoints[level];
   if (typeof document === 'undefined') return { points: [], length: 0 };
   
   try {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', SVG_PATH);
+    const d = getRawPathForLevel(level);
+    path.setAttribute('d', d);
     svg.appendChild(path);
-    document.body.appendChild(svg); // Important for some browsers to calculate length
+    document.body.appendChild(svg);
     
-    pathLength = path.getTotalLength();
+    const length = path.getTotalLength();
     const points = [];
-    const numSamples = 200;
+    const numSamples = 500;
     
     for (let i = 0; i <= numSamples; i++) {
-      const pt = path.getPointAtLength((i / numSamples) * pathLength);
+      const pt = path.getPointAtLength((i / numSamples) * length);
       points.push({ x: pt.x, y: pt.y });
     }
     
     document.body.removeChild(svg);
-    cachedPathPoints = points;
+    cachedPathPoints[level] = { points, length };
+    return cachedPathPoints[level];
   } catch (err) {
-    // Fallback static points if something fails with DOM methods
     console.error("SVG Path calculation failed, using fallback points");
-    cachedPathPoints = [
-      {x: -20, y: 120}, {x: 90, y: 85}, {x: 250, y: 70}, {x: 370, y: 135},
-      {x: 405, y: 200}, {x: 405, y: 275}, {x: 340, y: 315},
-      {x: 270, y: 355}, {x: 130, y: 370}, {x: 110, y: 428},
-      {x: 95, y: 490}, {x: 225, y: 542}, {x: 360, y: 567},
-      {x: 400, y: 585}, {x: 235, y: 658}, {x: -20, y: 682}
-    ];
-    pathLength = 1900;
+    const fallback = {
+      points: [
+        {x: 512, y: -50}, {x: 512, y: 850}
+      ],
+      length: 900
+    };
+    return fallback;
   }
-  
-  return { points: cachedPathPoints, length: pathLength };
 }
 
-export function getPointOnPath(progress: number) {
-  const { points, length } = getPathPoints();
+export function getPointOnPath(progress: number, level: number = 1) {
+  const { points, length } = getPathPoints(level);
   if (points.length === 0) return { x: 0, y: 0 };
   
   // Progress is expected to be distance along the path (0 to length)

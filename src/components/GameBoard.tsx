@@ -1,1101 +1,1082 @@
-
-import { motion } from 'motion/react';
-import { useState } from 'react';
-import { GameState, TowerType, Enemy } from '../types';
+import { motion, AnimatePresence } from 'motion/react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
+import { GameState, TowerType, Enemy, PlacedTurret } from '../types';
 import { TOWER_CONFIGS } from '../constants';
+import { Crosshair, Target, AlertTriangle } from 'lucide-react';
+import { getRawPathForLevel, getPathPoints } from '../utils/path';
 
-export const GameBoard = ({ 
-  gameState, 
-  buildTurret, 
-  selectedTower, 
-  setSelectedTower,
-  selectedTurretId,
-  setSelectedTurretId
-}: { 
-  gameState: GameState, 
-  buildTurret: (id: string, x: number, y: number, type: TowerType) => void,
-  selectedTower: TowerType | null,
-  setSelectedTower: (type: TowerType | null) => void,
-  selectedTurretId: string | null,
-  setSelectedTurretId: (id: string | null) => void
-}) => {
-    const TURRET_SLOTS = [
-      { id: '1',  x: 40,  y: 38  },
-      { id: '2',  x: 173, y: 26  },
-      { id: '3',  x: 333, y: 56  },
-      { id: '4',  x: 330, y: 188 },
-      { id: '5',  x: 318, y: 258 },
-      { id: '6',  x: 258, y: 285 },
-      { id: '7',  x: 159, y: 324 },
-      { id: '8',  x: 68,  y: 368 },
-      { id: '9',  x: 40,  y: 418 },
-      { id: '10', x: 57,  y: 476 },
-      { id: '11', x: 193, y: 450 },
-      { id: '12', x: 269, y: 482 },
-      { id: '13', x: 344, y: 502 },
-      { id: '14', x: 316, y: 543 },
-      { id: '15', x: 203, y: 641 },
+// Deterministic random generator for static decorative battlefield features
+const getSeededRandom = (seed: number) => {
+    return () => {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+    };
+};
+
+const getTurretSlotsForLevel = (level: number) => {
+  const { points } = getPathPoints(level);
+  
+  // If points are empty or fallback, return standard static slots
+  if (!points || points.length < 10) {
+    return [
+      { id: '1', x: 200, y: 150 }, { id: '2', x: 824, y: 150 }, { id: '3', x: 512, y: 250 }, { id: '4', x: 512, y: 550 },
+      { id: '5', x: 100, y: 400 }, { id: '6', x: 924, y: 400 }, { id: '7', x: 100, y: 700 }, { id: '8', x: 924, y: 700 },
+      { id: '9', x: 400, y: 850 }, { id: '10', x: 624, y: 850 }, { id: '11', x: 750, y: 250 }, { id: '12', x: 274, y: 550 },
+      { id: '13', x: 150, y: 50 }, { id: '14', x: 874, y: 50 }, { id: '15', x: 80, y: 250 }, { id: '16', x: 944, y: 850 },
+      { id: '17', x: 400, y: 100 }, { id: '18', x: 624, y: 100 }
     ];
-
-    const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
-
-    return (
-        <div className="relative w-full h-full bg-[#1b1712] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#2a241c] via-[#1b1712] to-[#0a0806] overflow-hidden flex items-center justify-center touch-none select-none" onClick={() => { setSelectedTower(null); setSelectedTurretId(null); }}>
-            
-            {/* SVG Interactive Ground Layer */}
-            <svg
-              className="w-full h-full max-w-full max-h-full pointer-events-none relative z-10"
-              viewBox="0 0 420 780"
-              preserveAspectRatio="xMidYMid meet"
-              style={{ transform: 'perspective(900px) rotateX(12deg)', transformOrigin: '50% 50%' }}
-            >
-              {/* Definitions for glows */}
-              <defs>
-                <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
-                  <feMerge>
-                    <feMergeNode in="coloredBlur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                  </feMerge>
-                </filter>
-                <filter id="groundShadow" x="-10%" y="-10%" width="120%" height="120%">
-                  <feDropShadow dx="3" dy="10" stdDeviation="8" floodColor="#000000" floodOpacity="0.8"/>
-                </filter>
-                <filter id="blackShadow" x="-10%" y="-10%" width="120%" height="120%">
-                  <feDropShadow dx="3" dy="5" stdDeviation="4" floodColor="#000000" floodOpacity="0.7"/>
-                </filter>
-                <filter id="unitShadow" x="-30%" y="-30%" width="160%" height="160%">
-                  <feDropShadow dx="5" dy="8" stdDeviation="4" floodColor="#000000" floodOpacity="0.7"/>
-                </filter>
-                
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(249, 115, 22, 0.05)" strokeWidth="1" />
-                </pattern>
-                
-                {/* Camouflage Patterns for Units */}
-                <pattern id="camoDesert" width="20" height="20" patternUnits="userSpaceOnUse">
-                  <rect width="20" height="20" fill="#d4b886" />
-                  <path d="M 0 5 Q 5 10 10 0 T 20 5" fill="none" stroke="#a3824f" strokeWidth="4" />
-                  <path d="M 0 15 Q 8 20 15 10 T 20 20" fill="none" stroke="#6e5734" strokeWidth="3" />
-                  <circle cx="5" cy="5" r="3" fill="#8c7348" opacity="0.8" />
-                  <circle cx="15" cy="15" r="4" fill="#a3824f" opacity="0.6" />
-                </pattern>
-                
-                <pattern id="camoJungle" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="scale(1.5)">
-                  <rect width="20" height="20" fill="#2a3d2e" />
-                  <path d="M 0 5 Q 5 10 10 0 T 20 5" fill="none" stroke="#1c291f" strokeWidth="5" />
-                  <path d="M 0 15 Q 8 20 15 10 T 20 20" fill="none" stroke="#324a38" strokeWidth="4" />
-                  <circle cx="2" cy="18" r="4" fill="#141c16" opacity="0.6" />
-                </pattern>
-                
-                <pattern id="camoUrban" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="scale(1.2)">
-                  <rect width="20" height="20" fill="#475569" />
-                  <path d="M 0 5 Q 5 10 10 0 T 20 5" fill="none" stroke="#1e293b" strokeWidth="5" />
-                  <path d="M 0 15 Q 8 20 15 10 T 20 20" fill="none" stroke="#334155" strokeWidth="4" />
-                </pattern>
-                
-                <linearGradient id="glass" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.8" />
-                  <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.4" />
-                </linearGradient>
-                <linearGradient id="metal" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#64748b" />
-                  <stop offset="50%" stopColor="#334155" />
-                  <stop offset="100%" stopColor="#1e293b" />
-                </linearGradient>
-                <linearGradient id="leftShadow" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#050200" stopOpacity="0.95" />
-                  <stop offset="100%" stopColor="#050200" stopOpacity="0" />
-                </linearGradient>
-                <linearGradient id="rightShadow" x1="100%" y1="0%" x2="0%" y2="0%">
-                  <stop offset="0%" stopColor="#050200" stopOpacity="0.95" />
-                  <stop offset="100%" stopColor="#050200" stopOpacity="0" />
-                </linearGradient>
-                <radialGradient id="craterGrad" cx="50%" cy="60%" r="50%">
-                  <stop offset="0%" stopColor="#0a0400" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#1a0a02" stopOpacity="0.7" />
-                </radialGradient>
-                {/* Topographical Line Patterns - spread across full canvas */}
-                <path id="topo1" d="M -50 88 Q 80 48 220 108 T 470 75" fill="none" stroke="rgba(249, 115, 22, 0.08)" strokeWidth="1.5" />
-                <path id="topo2" d="M -50 160 Q 100 120 245 178 T 470 142" fill="none" stroke="rgba(249, 115, 22, 0.06)" strokeWidth="1" />
-                <path id="topo3" d="M -50 338 Q 115 298 265 352 T 470 315" fill="none" stroke="rgba(249, 115, 22, 0.07)" strokeWidth="1" />
-                <path id="topo4" d="M -50 432 Q 100 395 255 448 T 470 412" fill="none" stroke="rgba(249, 115, 22, 0.09)" strokeWidth="1.5" />
-                <path id="topo5" d="M -50 698 Q 125 660 275 708 T 470 675" fill="none" stroke="rgba(249, 115, 22, 0.06)" strokeWidth="1" />
-              </defs>
-
-              <rect x="0" y="0" width="420" height="780" fill="url(#grid)" />
-
-              {/* Topo contour lines */}
-              <use href="#topo1" />
-              <use href="#topo2" />
-              <use href="#topo3" />
-              <use href="#topo4" />
-              <use href="#topo5" />
-
-              {/* Canyon edge vignette — suggests cliff walls on both sides */}
-              <rect x="0" y="0" width="48" height="780" fill="url(#leftShadow)" pointerEvents="none" />
-              <rect x="372" y="0" width="48" height="780" fill="url(#rightShadow)" pointerEvents="none" />
-
-              {/* Rock clusters — scattered off-road throughout the canyon */}
-              <g filter="url(#blackShadow)" opacity="0.82">
-                {/* A — upper-left, between road arc and left wall */}
-                <g transform="translate(22, 178)">
-                  <ellipse cx="0" cy="9" rx="22" ry="12" fill="#7a6045" />
-                  <ellipse cx="16" cy="4" rx="16" ry="9" fill="#6a5035" />
-                  <ellipse cx="-14" cy="6" rx="14" ry="8" fill="#8a7055" />
-                  <ellipse cx="5" cy="-1" rx="10" ry="6" fill="#5a4025" />
-                  <ellipse cx="-6" cy="-3" rx="7" ry="4" fill="#4a3018" />
-                </g>
-                {/* B — right canyon wall, mid-upper */}
-                <g transform="translate(402, 228)">
-                  <ellipse cx="0" cy="8" rx="18" ry="10" fill="#7a6045" />
-                  <ellipse cx="-14" cy="4" rx="13" ry="7" fill="#6a5035" />
-                  <ellipse cx="10" cy="3" rx="11" ry="6" fill="#8a7055" />
-                </g>
-                {/* C — left wall, below the road bend */}
-                <g transform="translate(15, 395)">
-                  <ellipse cx="0" cy="9" rx="20" ry="11" fill="#7a6045" />
-                  <ellipse cx="15" cy="4" rx="15" ry="8" fill="#6a5035" />
-                  <ellipse cx="-10" cy="5" rx="13" ry="7" fill="#8a7055" />
-                  <ellipse cx="6" cy="-1" rx="9" ry="5" fill="#5a4025" />
-                </g>
-                {/* D — right wall, lower section */}
-                <g transform="translate(404, 618)">
-                  <ellipse cx="0" cy="8" rx="16" ry="9" fill="#7a6045" />
-                  <ellipse cx="-12" cy="4" rx="12" ry="7" fill="#6a5035" />
-                  <ellipse cx="9" cy="2" rx="11" ry="6" fill="#8a7055" />
-                </g>
-                {/* E — bottom left corner */}
-                <g transform="translate(18, 718)">
-                  <ellipse cx="0" cy="8" rx="18" ry="10" fill="#7a6045" />
-                  <ellipse cx="14" cy="3" rx="14" ry="8" fill="#6a5035" />
-                  <ellipse cx="-11" cy="5" rx="12" ry="7" fill="#8a7055" />
-                </g>
-                {/* F — upper right, near entry turn */}
-                <g transform="translate(402, 118)">
-                  <ellipse cx="0" cy="7" rx="15" ry="8" fill="#7a6045" />
-                  <ellipse cx="-11" cy="3" rx="11" ry="6" fill="#6a5035" />
-                  <ellipse cx="8" cy="2" rx="9" ry="5" fill="#8a7055" />
-                </g>
-              </g>
-
-              {/* Battle craters */}
-              <g opacity="0.72">
-                {/* Crater 1 — top center */}
-                <g transform="translate(200, 158)">
-                  <ellipse cx="0" cy="5" rx="28" ry="19" fill="url(#craterGrad)" />
-                  <ellipse cx="0" cy="5" rx="28" ry="19" fill="none" stroke="#5a3810" strokeWidth="3" opacity="0.55" />
-                  <ellipse cx="0" cy="5" rx="36" ry="24" fill="none" stroke="#3a2208" strokeWidth="1.5" opacity="0.3" />
-                </g>
-                {/* Crater 2 — right side, mid */}
-                <g transform="translate(388, 390)">
-                  <ellipse cx="0" cy="4" rx="22" ry="15" fill="url(#craterGrad)" />
-                  <ellipse cx="0" cy="4" rx="22" ry="15" fill="none" stroke="#5a3810" strokeWidth="2.5" opacity="0.55" />
-                  <ellipse cx="0" cy="4" rx="29" ry="20" fill="none" stroke="#3a2208" strokeWidth="1.5" opacity="0.28" />
-                </g>
-                {/* Crater 3 — lower center */}
-                <g transform="translate(178, 636)">
-                  <ellipse cx="0" cy="5" rx="25" ry="17" fill="url(#craterGrad)" />
-                  <ellipse cx="0" cy="5" rx="25" ry="17" fill="none" stroke="#5a3810" strokeWidth="2.5" opacity="0.55" />
-                  <ellipse cx="0" cy="5" rx="32" ry="22" fill="none" stroke="#3a2208" strokeWidth="1.5" opacity="0.28" />
-                </g>
-                {/* Crater 4 — left mid area */}
-                <g transform="translate(28, 560)">
-                  <ellipse cx="0" cy="4" rx="19" ry="13" fill="url(#craterGrad)" />
-                  <ellipse cx="0" cy="4" rx="19" ry="13" fill="none" stroke="#5a3810" strokeWidth="2" opacity="0.5" />
-                  <ellipse cx="0" cy="4" rx="25" ry="17" fill="none" stroke="#3a2208" strokeWidth="1" opacity="0.25" />
-                </g>
-              </g>
-
-              {/* Dead desert shrubs */}
-              <g stroke="#5a4828" strokeLinecap="round" opacity="0.55">
-                <g transform="translate(390, 52)" strokeWidth="1.5">
-                  <line x1="0" y1="0" x2="-9" y2="-15" />
-                  <line x1="0" y1="0" x2="7" y2="-17" />
-                  <line x1="0" y1="0" x2="-15" y2="-8" />
-                  <line x1="0" y1="0" x2="13" y2="-7" />
-                  <line x1="0" y1="0" x2="1" y2="-20" />
-                  <circle cx="0" cy="0" r="3.5" fill="#3a2a0a" stroke="none" />
-                </g>
-                <g transform="translate(30, 318)" strokeWidth="1.5">
-                  <line x1="0" y1="0" x2="-8" y2="-13" />
-                  <line x1="0" y1="0" x2="9" y2="-14" />
-                  <line x1="0" y1="0" x2="-14" y2="-6" />
-                  <line x1="0" y1="0" x2="14" y2="-5" />
-                  <line x1="0" y1="0" x2="2" y2="-17" />
-                  <circle cx="0" cy="0" r="3" fill="#3a2a0a" stroke="none" />
-                </g>
-                <g transform="translate(60, 498)" strokeWidth="1.2">
-                  <line x1="0" y1="0" x2="-7" y2="-11" />
-                  <line x1="0" y1="0" x2="8" y2="-12" />
-                  <line x1="0" y1="0" x2="-12" y2="-5" />
-                  <line x1="0" y1="0" x2="11" y2="-6" />
-                  <circle cx="0" cy="0" r="2.5" fill="#3a2a0a" stroke="none" />
-                </g>
-                <g transform="translate(392, 665)" strokeWidth="1.5">
-                  <line x1="0" y1="0" x2="-8" y2="-14" />
-                  <line x1="0" y1="0" x2="6" y2="-15" />
-                  <line x1="0" y1="0" x2="-13" y2="-7" />
-                  <line x1="0" y1="0" x2="12" y2="-8" />
-                  <circle cx="0" cy="0" r="3" fill="#3a2a0a" stroke="none" />
-                </g>
-              </g>
-
-              <g filter="url(#groundShadow)">
-                {/* Sand Border Base */}
-                <path d="M -20 120 C 90 65 250 65 370 135 C 405 195 405 275 340 315 C 270 355 130 370 110 428 C 90 486 225 542 360 567 C 400 585 235 658 -20 682"
-                      stroke="#b28d57" strokeWidth="58" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
-                {/* Sand Road */}
-                <path d="M -20 120 C 90 65 250 65 370 135 C 405 195 405 275 340 315 C 270 355 130 370 110 428 C 90 486 225 542 360 567 C 400 585 235 658 -20 682"
-                      stroke="#d4ac75" strokeWidth="46" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="1" />
-                {/* Dirt Tracks */}
-                <path d="M -20 120 C 90 65 250 65 370 135 C 405 195 405 275 340 315 C 270 355 130 370 110 428 C 90 486 225 542 360 567 C 400 585 235 658 -20 682"
-                      stroke="#c09861" strokeWidth="12" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
-              </g>
-
-              {/* Military Structures & Decor */}
-              <g filter="url(#blackShadow)">
-
-                {/* ── BASE CAMP 1 — left side, mid-height ── */}
-                <g transform="translate(100, 265) rotate(-12)">
-                  {/* Tents */}
-                  <g transform="translate(0, 0)">
-                    <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
-                    <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
-                  </g>
-                  <g transform="translate(38, 7)">
-                    <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
-                    <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
-                  </g>
-                  {/* Sandbag wall in front */}
-                  <g transform="translate(-5, 22)">
-                    <ellipse cx="-12" cy="0" rx="9" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="1" />
-                    <ellipse cx="0"   cy="0" rx="9" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="1" />
-                    <ellipse cx="12"  cy="0" rx="9" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="1" />
-                    <ellipse cx="-6"  cy="-6" rx="9" ry="5" fill="#7a6345" stroke="#5a4a30" strokeWidth="1" />
-                    <ellipse cx="6"   cy="-6" rx="9" ry="5" fill="#7a6345" stroke="#5a4a30" strokeWidth="1" />
-                  </g>
-                  {/* Fuel drums */}
-                  <g transform="translate(62, -6)">
-                    <rect x="-5" y="-14" width="10" height="22" rx="3" fill="#2d2d2d" stroke="#111" strokeWidth="1" />
-                    <line x1="-5" y1="-6" x2="5" y2="-6" stroke="#555" strokeWidth="1" />
-                    <line x1="-5" y1="2" x2="5" y2="2" stroke="#555" strokeWidth="1" />
-                    <circle cx="0" cy="-14" r="3" fill="#1a1a1a" stroke="#555" strokeWidth="0.5" />
-                    <rect x="7" y="-11" width="8" height="18" rx="2.5" fill="#8B0000" stroke="#111" strokeWidth="1" />
-                    <line x1="7" y1="-4" x2="15" y2="-4" stroke="#600" strokeWidth="0.8" />
-                    <line x1="7" y1="4" x2="15" y2="4" stroke="#600" strokeWidth="0.8" />
-                  </g>
-                  {/* Flagpole */}
-                  <g transform="translate(-28, -22)">
-                    <line x1="0" y1="0" x2="0" y2="-28" stroke="#888" strokeWidth="1.5" />
-                    <polygon points="0,-28 14,-23 0,-18" fill="#4b5320" />
-                  </g>
-                </g>
-
-                {/* ── CHECKPOINT BARRICADE — center upper ── */}
-                <g transform="translate(200, 188) rotate(5)">
-                  {/* Barrier pole */}
-                  <rect x="-2" y="-25" width="4" height="50" fill="#64748b" />
-                  <line x1="-2" y1="-25" x2="20" y2="0" stroke="#111" strokeWidth="1.5" />
-                  <rect x="18" y="-4" width="5" height="8" fill="#475569" stroke="#111" />
-                  {/* Flag/pennant */}
-                  <path d="M -8 -32 Q -4 -36 0 -32 Q 4 -36 8 -32 Q 12 -36 16 -32 L 16 -25 L -8 -25 Z" fill="#d4d4d8" stroke="#71717a" strokeWidth="1" />
-                  <circle cx="4" cy="-29" r="3" fill="#3f3f46" />
-                  {/* Sandbags flanking checkpoint */}
-                  <g transform="translate(-28, 12)">
-                    <ellipse cx="0"  cy="0" rx="8" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="0.8" />
-                    <ellipse cx="10" cy="0" rx="8" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="0.8" />
-                    <ellipse cx="5"  cy="-5" rx="7" ry="4" fill="#7a6345" stroke="#5a4a30" strokeWidth="0.8" />
-                  </g>
-                  <g transform="translate(22, 12)">
-                    <ellipse cx="0"  cy="0" rx="8" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="0.8" />
-                    <ellipse cx="10" cy="0" rx="8" ry="5" fill="#8B7355" stroke="#5a4a30" strokeWidth="0.8" />
-                    <ellipse cx="5"  cy="-5" rx="7" ry="4" fill="#7a6345" stroke="#5a4a30" strokeWidth="0.8" />
-                  </g>
-                </g>
-
-                {/* ── WATCHTOWER — mid right canyon wall ── */}
-                <g transform="translate(405, 356)">
-                  {/* Legs */}
-                  <line x1="-10" y1="30" x2="-5" y2="-10" stroke="#5a4a30" strokeWidth="2.5" />
-                  <line x1="10"  y1="30" x2="5"  y2="-10" stroke="#5a4a30" strokeWidth="2.5" />
-                  <line x1="-10" y1="30" x2="5"  y2="-10" stroke="#5a4a30" strokeWidth="1.5" opacity="0.5" />
-                  <line x1="10"  y1="30" x2="-5" y2="-10" stroke="#5a4a30" strokeWidth="1.5" opacity="0.5" />
-                  {/* Platform */}
-                  <rect x="-14" y="-18" width="28" height="12" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5" />
-                  {/* Railing */}
-                  <line x1="-14" y1="-18" x2="-14" y2="-28" stroke="#3a4018" strokeWidth="1.5" />
-                  <line x1="14"  y1="-18" x2="14"  y2="-28" stroke="#3a4018" strokeWidth="1.5" />
-                  <line x1="-14" y1="-28" x2="14"  y2="-28" stroke="#3a4018" strokeWidth="1.5" />
-                  {/* Searchlight */}
-                  <circle cx="0" cy="-24" r="4" fill="#334155" stroke="#64748b" strokeWidth="1" />
-                  <polygon points="-3,-20 3,-20 8,4 -8,4" fill="#fef08a" opacity="0.15" />
-                </g>
-
-                {/* ── BASE CAMP 2 — top right ── */}
-                <g transform="translate(352, 62) rotate(15)">
-                  <g transform="translate(0, 0)">
-                    <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
-                    <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
-                  </g>
-                  <g transform="translate(-36, -16)">
-                    <rect x="-18" y="-13" width="36" height="26" fill="#4b5320" rx="2" stroke="#2b3011" strokeWidth="1.5"/>
-                    <line x1="-18" y1="0" x2="18" y2="0" stroke="#2b3011" strokeWidth="2" />
-                    <circle cx="0" cy="0" r="1.5" fill="#2b3011" />
-                  </g>
-                  {/* Ammo crates */}
-                  <g transform="translate(-46, 18)">
-                    <rect x="0" y="-8" width="14" height="10" fill="#3d4a1a" stroke="#2b3011" strokeWidth="1" rx="1" />
-                    <line x1="0" y1="-3" x2="14" y2="-3" stroke="#2b3011" strokeWidth="0.8" />
-                    <rect x="16" y="-6" width="12" height="8" fill="#3d4a1a" stroke="#2b3011" strokeWidth="1" rx="1" />
-                    <line x1="16" y1="-2" x2="28" y2="-2" stroke="#2b3011" strokeWidth="0.8" />
-                  </g>
-                  {/* Flagpole */}
-                  <g transform="translate(20, -28)">
-                    <line x1="0" y1="0" x2="0" y2="-24" stroke="#888" strokeWidth="1.5" />
-                    <polygon points="0,-24 12,-20 0,-16" fill="#4b5320" />
-                  </g>
-                </g>
-
-                {/* ── AIRFIELD — bottom ── */}
-                <g transform="translate(290, 716)">
-                  <rect x="-28" y="-18" width="56" height="36" fill="#3e451b" rx="4" stroke="#2b3011" strokeWidth="2"/>
-                  <line x1="-28" y1="-8" x2="28" y2="-8" stroke="#2b3011" strokeWidth="2" />
-                  <line x1="-28" y1="8" x2="28" y2="8" stroke="#2b3011" strokeWidth="2" />
-                  {/* Runway centerline dashes */}
-                  <line x1="0" y1="-18" x2="0" y2="-12" stroke="#6b7240" strokeWidth="1.5" strokeDasharray="3 2" />
-                  <g transform="translate(-42, 26) rotate(-20)">
-                    <path d="M-16,-3 L20,0 L-16,3 Z" fill="#64748b" stroke="#111" strokeWidth="1" />
-                    <path d="M-4,-16 L8,0 L-4,16 Z" fill="#475569" stroke="#111" strokeWidth="1" />
-                    <circle cx="8" cy="0" r="2.5" fill="#0ea5e9" stroke="#111" strokeWidth="1" />
-                  </g>
-                  <g transform="translate(22, 44) rotate(-35)">
-                    <path d="M-16,-3 L20,0 L-16,3 Z" fill="#64748b" stroke="#111" strokeWidth="1" />
-                    <path d="M-4,-16 L8,0 L-4,16 Z" fill="#475569" stroke="#111" strokeWidth="1" />
-                    <circle cx="8" cy="0" r="2.5" fill="#0ea5e9" stroke="#111" strokeWidth="1" />
-                  </g>
-                  {/* Fuel depot */}
-                  <g transform="translate(38, -6)">
-                    <rect x="-5" y="-12" width="10" height="18" rx="3" fill="#2d2d2d" stroke="#111" strokeWidth="1" />
-                    <line x1="-5" y1="-4" x2="5" y2="-4" stroke="#555" strokeWidth="1" />
-                    <rect x="7" y="-10" width="9" height="16" rx="2.5" fill="#8B0000" stroke="#111" strokeWidth="1" />
-                  </g>
-                </g>
-
-                {/* ── ABANDONED VEHICLE WRECK — canyon left ── */}
-                <g transform="translate(38, 228) rotate(18)" opacity="0.7">
-                  <rect x="-18" y="-9" width="36" height="18" rx="3" fill="#3a3020" stroke="#111" strokeWidth="1.5" />
-                  <rect x="-14" y="-7" width="20" height="14" rx="2" fill="#2a2018" stroke="#111" strokeWidth="1" />
-                  <rect x="-10" y="-9" width="8" height="4" rx="1" fill="#111" />
-                  <rect x="-10" y="5" width="8" height="4" rx="1" fill="#111" />
-                  <rect x="8" y="-9" width="6" height="4" rx="1" fill="#111" />
-                  <rect x="8" y="5" width="6" height="4" rx="1" fill="#111" />
-                  <rect x="12" y="-6" width="6" height="12" rx="1" fill="#1a1008" />
-                  {/* Rust/damage marks */}
-                  <line x1="-4" y1="-9" x2="2" y2="9" stroke="#5a3010" strokeWidth="1.5" opacity="0.6" />
-                  <line x1="6" y1="-9" x2="0" y2="9" stroke="#5a3010" strokeWidth="1" opacity="0.4" />
-                </g>
-
-              </g>
-
-              {/* Glowing Entry / Exit Portals */}
-              <circle cx="0" cy="120" r="30" fill="#f97316" opacity="0.05" filter="url(#neonGlow)" />
-              <line x1="0" y1="90" x2="0" y2="150" stroke="#f97316" strokeWidth="4" filter="url(#neonGlow)" />
-              <line x1="-12" y1="90" x2="-12" y2="150" stroke="#f97316" strokeWidth="2" opacity="0.4" />
-
-              <circle cx="0" cy="682" r="30" fill="#f97316" opacity="0.05" filter="url(#neonGlow)" />
-              <line x1="0" y1="652" x2="0" y2="712" stroke="#f97316" strokeWidth="4" filter="url(#neonGlow)" />
-              <line x1="-12" y1="652" x2="-12" y2="712" stroke="#f97316" strokeWidth="2" opacity="0.4" />
-
-              {/* Render Enemies */}
-              {gameState.enemies.map(enemy => (
-                <g key={enemy.id} transform={`translate(${enemy.x}, ${enemy.y}) rotate(${enemy.rotation || 0})`}>
-                  
-                  {/* Health Bar */}
-                  {(() => {
-                    const ratio = enemy.hp / enemy.maxHp;
-                    const hpColor = ratio > 0.6 ? '#22c55e' : ratio > 0.3 ? '#facc15' : '#ef4444';
-                    return (
-                      <g transform={`rotate(${-(enemy.rotation || 0)}) translate(-15, -25)`}>
-                        <rect width="30" height="4" fill="#111" rx="2" />
-                        <rect width={30 * ratio} height="4" fill={hpColor} rx="2" />
-                      </g>
-                    );
-                  })()}
-
-                  {/* Enemy Visuals based on Type */}
-                  {enemy.type === 'jeep' && (
-                    <motion.g 
-                      initial={{ y: 0 }}
-                      animate={{ y: [0, -3, 0] }} 
-                      transition={{ duration: 0.5, repeat: Infinity }}
-                      filter="url(#unitShadow)"
-                    >
-                      {/* Detailed Jeep Body with camo */}
-                      <rect x="-16" y="-12" width="32" height="24" rx="4" fill="url(#camoJungle)" stroke="#111" strokeWidth="1" />
-                      {/* Inner darker section */}
-                      <rect x="-12" y="-10" width="24" height="20" rx="3" fill="url(#camoDesert)" opacity="0.6" stroke="#111" strokeWidth="0.5" />
-                      
-                      {/* Windshield */}
-                      <rect x="0" y="-8" width="8" height="16" fill="url(#glass)" stroke="#fff" strokeWidth="0.5" opacity="0.8" />
-                      
-                      {/* Wheels */}
-                      <rect x="-12" y="-16" width="10" height="6" rx="2" fill="#111" stroke="#000" strokeWidth="1" />
-                      <rect x="-12" y="10" width="10" height="6" rx="2" fill="#111" stroke="#000" strokeWidth="1" />
-                      <rect x="6" y="-16" width="8" height="6" rx="2" fill="#111" stroke="#000" strokeWidth="1" />
-                      <rect x="6" y="10" width="8" height="6" rx="2" fill="#111" stroke="#000" strokeWidth="1" />
-
-                      {/* Headlights */}
-                      <circle cx="16" cy="-8" r="2" fill="#ffedd5" filter="url(#neonGlow)" />
-                      <circle cx="16" cy="8" r="2" fill="#ffedd5" filter="url(#neonGlow)" />
-                      {/* Light beams */}
-                      <polygon points="17,-8 40,-16 40,0" fill="#fff" opacity="0.1" />
-                      <polygon points="17,8 40,0 40,16" fill="#fff" opacity="0.1" />
-                    </motion.g>
-                  )}
-
-                  {enemy.type === 'tank' && (
-                    <g filter="url(#unitShadow)">
-                      {/* Treads */}
-                      <rect x="-22" y="-18" width="44" height="10" rx="2" fill="url(#metal)" stroke="#000" strokeWidth="1" />
-                      <rect x="-22" y="8" width="44" height="10" rx="2" fill="url(#metal)" stroke="#000" strokeWidth="1" />
-                      
-                      {/* Main Body */}
-                      <path d="M -16 -12 L 14 -12 L 20 -4 L 20 4 L 14 12 L -16 12 Z" fill="url(#camoDesert)" stroke="#1c291f" strokeWidth="1.5" />
-                      
-                      {/* Engine Details */}
-                      <rect x="-14" y="-8" width="8" height="16" fill="#1a2e21" stroke="#111" strokeWidth="0.5" />
-                      <line x1="-12" y1="-6" x2="-12" y2="6" stroke="#000" strokeWidth="1" />
-                      <line x1="-10" y1="-6" x2="-10" y2="6" stroke="#000" strokeWidth="1" />
-                      <line x1="-8" y1="-6" x2="-8" y2="6" stroke="#000" strokeWidth="1" />
-
-                      {/* Turret Base */}
-                      <circle cx="2" cy="0" r="12" fill="url(#camoJungle)" stroke="#000" strokeWidth="1.5" />
-                      <circle cx="2" cy="0" r="6" fill="#111" opacity="0.8" />
-
-                      {/* Cannon */}
-                      <rect x="8" y="-3" width="28" height="6" fill="url(#metal)" stroke="#000" strokeWidth="1" />
-                      <rect x="34" y="-4" width="6" height="8" fill="#111" />
-                      <line x1="8" y1="0" x2="34" y2="0" stroke="#fff" strokeWidth="0.5" opacity="0.3" />
-                    </g>
-                  )}
-
-                  {enemy.type === 'apc' && (
-                    <g filter="url(#unitShadow)">
-                      {/* Wheels - 6 wheeled */}
-                      <rect x="-16" y="-14" width="8" height="6" rx="2" fill="#111" stroke="#000" />
-                      <rect x="0" y="-14" width="8" height="6" rx="2" fill="#111" stroke="#000" />
-                      <rect x="16" y="-14" width="8" height="6" rx="2" fill="#111" stroke="#000" />
-                      
-                      <rect x="-16" y="8" width="8" height="6" rx="2" fill="#111" stroke="#000" />
-                      <rect x="0" y="8" width="8" height="6" rx="2" fill="#111" stroke="#000" />
-                      <rect x="16" y="8" width="8" height="6" rx="2" fill="#111" stroke="#000" />
-
-                      {/* Armored Body */}
-                      <path d="M -22 -10 L 22 -10 L 26 -4 L 26 4 L 22 10 L -22 10 Z" fill="url(#camoUrban)" stroke="#111" strokeWidth="1.5" />
-                      
-                      {/* Hatches and Details */}
-                      <rect x="-14" y="-6" width="20" height="12" fill="url(#metal)" opacity="0.8" stroke="#111" strokeWidth="0.5" />
-                      <circle cx="-4" cy="0" r="4" fill="#111" stroke="#333" />
-                      <circle cx="8" cy="0" r="4" fill="#111" stroke="#333" />
-                      
-                      {/* Turret */}
-                      <circle cx="16" cy="0" r="5" fill="#222" stroke="#111" strokeWidth="1" />
-                      <rect x="16" y="-1" width="12" height="2" fill="url(#metal)" stroke="#000" strokeWidth="0.5" />
-                    </g>
-                  )}
-
-                  {enemy.type === 'squad' && (
-                    <g filter="url(#blackShadow)">
-                      {/* Solider 1 */}
-                      <g transform="translate(6, 6)">
-                        <circle cx="0" cy="0" r="4.5" fill="url(#camoJungle)" stroke="#111" strokeWidth="1" />
-                        <rect x="2" y="-1" width="12" height="2" fill="#111" />
-                        <circle cx="1" cy="0" r="2.5" fill="#000" />
-                      </g>
-                      {/* Solider 2 */}
-                      <g transform="translate(-5, -5)">
-                        <circle cx="0" cy="0" r="4.5" fill="url(#camoJungle)" stroke="#111" strokeWidth="1" />
-                        <rect x="2" y="-1" width="10" height="2" fill="#111" />
-                        <circle cx="1" cy="0" r="2.5" fill="#000" />
-                      </g>
-                      {/* Solider 3 */}
-                      <g transform="translate(-8, 8)">
-                        <circle cx="0" cy="0" r="4.5" fill="url(#camoJungle)" stroke="#111" strokeWidth="1" />
-                        <rect x="2" y="-1" width="10" height="2" fill="#111" />
-                        <circle cx="1" cy="0" r="2.5" fill="#000" />
-                      </g>
-                    </g>
-                  )}
-
-                  {enemy.type === 'buggy' && (
-                    <motion.g 
-                      initial={{ y: 0 }}
-                      animate={{ y: [0, -2, 0] }} 
-                      transition={{ duration: 0.3, repeat: Infinity }}
-                      filter="url(#unitShadow)"
-                    >
-                      {/* Big Wheels */}
-                      <rect x="-10" y="-10" width="10" height="5" rx="2" fill="#111" stroke="#000" />
-                      <rect x="8" y="-10" width="10" height="5" rx="2" fill="#111" stroke="#000" />
-                      <rect x="-10" y="5" width="10" height="5" rx="2" fill="#111" stroke="#000" />
-                      <rect x="8" y="5" width="10" height="5" rx="2" fill="#111" stroke="#000" />
-
-                      {/* Frame */}
-                      <path d="M -12 -5 L 12 -4 L 14 0 L 12 4 L -12 5 Z" fill="#b45309" stroke="#111" strokeWidth="1" />
-                      
-                      {/* Roll Cage */}
-                      <path d="M -6 -4 L 6 -4 L 6 4 L -6 4 Z" fill="none" stroke="#e2e8f0" strokeWidth="1.5" />
-                      <line x1="-6" y1="-4" x2="6" y2="4" stroke="#e2e8f0" strokeWidth="1" />
-                      <line x1="-6" y1="4" x2="6" y2="-4" stroke="#e2e8f0" strokeWidth="1" />
-
-                      {/* Engine */}
-                      <rect x="-14" y="-3" width="4" height="6" fill="url(#metal)" stroke="#111" />
-                      
-                      {/* Driver */}
-                      <circle cx="0" cy="0" r="3" fill="#111" />
-                      <circle cx="0" cy="0" r="1.5" fill="#ef4444" />
-                    </motion.g>
-                  )}
-
-                  {enemy.type === 'heavy_tank' && (
-                    <g filter="url(#unitShadow)">
-                      {/* Quad Treads */}
-                      <rect x="-26" y="-22" width="52" height="12" rx="3" fill="url(#metal)" stroke="#111" strokeWidth="1.5" />
-                      <rect x="-26" y="10" width="52" height="12" rx="3" fill="url(#metal)" stroke="#111" strokeWidth="1.5" />
-                      <rect x="-18" y="-23" width="36" height="46" fill="#111" />
-
-                      {/* Main Chassis */}
-                      <path d="M -22 -16 L 20 -16 L 30 -8 L 30 8 L 20 16 L -22 16 Z" fill="url(#camoDesert)" stroke="#111" strokeWidth="2" />
-                      {/* Details & Panels */}
-                      <rect x="-16" y="-10" width="12" height="20" fill="url(#metal)" opacity="0.6" stroke="#111" />
-                      <rect x="-2" y="-10" width="18" height="20" fill="url(#camoUrban)" rx="2" stroke="#111" />
-
-                      {/* Massive Turret */}
-                      <circle cx="4" cy="0" r="18" fill="url(#camoJungle)" stroke="#111" strokeWidth="2" />
-                      <circle cx="4" cy="0" r="10" fill="#111" opacity="0.7" />
-                      
-                      {/* Dual Cannons */}
-                      <rect x="20" y="-7" width="36" height="5" fill="url(#metal)" stroke="#111" strokeWidth="1" />
-                      <rect x="20" y="2" width="36" height="5" fill="url(#metal)" stroke="#111" strokeWidth="1" />
-                      
-                      {/* Muzzles */}
-                      <rect x="52" y="-8" width="8" height="7" fill="#111" />
-                      <rect x="52" y="1" width="8" height="7" fill="#111" />
-                    </g>
-                  )}
-
-                  {enemy.type === 'emp_drone' && (
-                    <motion.g 
-                      animate={{ rotate: 360 }} 
-                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                      filter="url(#unitShadow)"
-                    >
-                      <circle cx="0" cy="0" r="18" fill="#3b82f6" fillOpacity="0.15" stroke="#60a5fa" strokeWidth="1.5" strokeDasharray="4 4" className="animate-pulse" filter="url(#neonGlow)" />
-                      <path d="M -10 0 L 0 -10 L 10 0 L 0 10 Z" fill="url(#metal)" stroke="#818cf8" strokeWidth="1.5" />
-                      <circle cx="0" cy="0" r="5" fill="#1e293b" />
-                      <circle cx="0" cy="0" r="2" fill="#fff" filter="url(#neonGlow)" />
-                      {/* Rotors */}
-                      <circle cx="-10" cy="-10" r="4" fill="none" stroke="#fff" strokeWidth="1" opacity="0.5" />
-                      <circle cx="10" cy="-10" r="4" fill="none" stroke="#fff" strokeWidth="1" opacity="0.5" />
-                      <circle cx="-10" cy="10" r="4" fill="none" stroke="#fff" strokeWidth="1" opacity="0.5" />
-                      <circle cx="10" cy="10" r="4" fill="none" stroke="#fff" strokeWidth="1" opacity="0.5" />
-                    </motion.g>
-                  )}
-                  
-                  {enemy.type === 'jet' && (
-                    <motion.g 
-                      initial={{ scale: 1.2 }}
-                      animate={{ scale: [1.2, 1.3, 1.2] }} 
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      filter="url(#unitShadow)"
-                    >
-                      {/* Jet fighter shape */}
-                      <path d="M -15 -14 L -5 0 L -15 14 Z" fill="url(#metal)" stroke="#111" strokeWidth="0.5" />
-                      <path d="M -10 -25 L 8 0 L -10 25 Z" fill="url(#camoUrban)" stroke="#111" strokeWidth="1" />
-                      <path d="M -5 -5 L 24 0 L -5 5 Z" fill="url(#metal)" stroke="#111" strokeWidth="0.5" />
-                      {/* Cockpit */}
-                      <ellipse cx="6" cy="0" rx="6" ry="2" fill="url(#glass)" />
-                      {/* Engine Exhaust */}
-                      <circle cx="-12" cy="-8" r="2" fill="#ef4444" filter="url(#neonGlow)" />
-                      <circle cx="-12" cy="8" r="2" fill="#ef4444" filter="url(#neonGlow)" />
-                      <polygon points="-14,-8 -24,-10 -24,-6" fill="#f97316" opacity="0.8" filter="url(#neonGlow)" />
-                      <polygon points="-14,8 -24,6 -24,10" fill="#f97316" opacity="0.8" filter="url(#neonGlow)" />
-                    </motion.g>
-                  )}
-
-                  {enemy.type === 'stealth_heli' && (
-                    <motion.g
-                      initial={{ scale: 1.1 }}
-                      animate={{ scale: [1.1, 1.15, 1.1], opacity: [0.45, 0.55, 0.45] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      filter="url(#unitShadow)"
-                    >
-                      {/* Body */}
-                      <path d="M -14 -6 L 18 -5 L 24 0 L 18 5 L -14 6 Z" fill="#0f172a" stroke="#000" strokeWidth="1.5" />
-                      {/* Cockpit */}
-                      <path d="M 8 -3 L 18 -2 L 18 2 L 8 3 Z" fill="url(#glass)" opacity="0.8" />
-                      {/* Tail */}
-                      <rect x="-28" y="-1.5" width="14" height="3" fill="#1e293b" />
-                      <path d="M -28 -6 L -24 -1.5 L -28 3 Z" fill="#0f172a" stroke="#000" strokeWidth="0.5" />
-                      {/* Rotors */}
-                      <motion.g animate={{ rotate: 360 }} transition={{ duration: 0.15, repeat: Infinity, ease: "linear" }}>
-                         <circle cx="0" cy="0" r="20" fill="#fff" opacity="0.1" />
-                         <path d="M -20 -2 L 20 -2 L 20 2 L -20 2 Z" fill="#fff" opacity="0.3" filter="url(#neonGlow)" />
-                         <path d="M -2 -20 L 2 -20 L 2 20 L -2 20 Z" fill="#fff" opacity="0.3" filter="url(#neonGlow)" />
-                      </motion.g>
-                      <circle cx="0" cy="0" r="2" fill="#111" />
-                    </motion.g>
-                  )}
-
-                  {enemy.type === 'bomber' && (
-                    <motion.g 
-                      initial={{ scale: 1.3 }}
-                      animate={{ scale: [1.3, 1.4, 1.3] }} 
-                      transition={{ duration: 2, repeat: Infinity }}
-                      filter="url(#unitShadow)"
-                    >
-                      {/* Fuselage */}
-                      <polygon points="-24,-6 24,0 -24,6" fill="#1e293b" stroke="#111" strokeWidth="1.5" />
-                      {/* Enormous wings */}
-                      <polygon points="-5,0 -15,-30 8,0 -15,30" fill="url(#camoJungle)" stroke="#111" strokeWidth="1.5" />
-                      {/* Cockpit */}
-                      <ellipse cx="12" cy="0" rx="4" ry="2" fill="url(#glass)" />
-                      <circle cx="12" cy="0" r="2" fill="#ef4444" opacity="0.5" filter="url(#neonGlow)" />
-                      {/* Jet trails */}
-                      <line x1="-15" y1="-15" x2="-35" y2="-15" stroke="#fff" opacity="0.3" strokeWidth="2" />
-                      <line x1="-15" y1="15" x2="-35" y2="15" stroke="#fff" opacity="0.3" strokeWidth="2" />
-                    </motion.g>
-                  )}
-
-                  {enemy.type === 'motorcycle' && (
-                    <g filter="url(#unitShadow)">
-                      <rect x="-8" y="-3" width="16" height="6" rx="2" fill="#111" />
-                      <rect x="-4" y="-3" width="8" height="6" fill="url(#metal)" />
-                      <circle cx="-6" cy="0" r="3.5" fill="#111" stroke="#333" strokeWidth="1" />
-                      <circle cx="6" cy="0" r="3.5" fill="#111" stroke="#333" strokeWidth="1" />
-                      <path d="M -2 -2 L 4 -2 L 2 -4 Z" fill="#10b981" />
-                      {/* Headlight */}
-                      <circle cx="8" cy="0" r="1.5" fill="#fde047" filter="url(#neonGlow)" />
-                      <polygon points="9,-4 25,-12 25,12 9,4" fill="#fef08a" opacity="0.2" />
-                      <circle cx="-2" cy="0" r="2" fill="#111" />
-                    </g>
-                  )}
-
-                  {enemy.type === 'medic_truck' && (
-                    <g filter="url(#unitShadow)">
-                      {/* Wheels */}
-                      <rect x="-14" y="-10" width="8" height="4" rx="1" fill="#111" />
-                      <rect x="8" y="-10" width="8" height="4" rx="1" fill="#111" />
-                      <rect x="-14" y="6" width="8" height="4" rx="1" fill="#111" />
-                      <rect x="8" y="6" width="8" height="4" rx="1" fill="#111" />
-                      
-                      {/* Body */}
-                      <rect x="-16" y="-8" width="32" height="16" rx="3" fill="#f8fafc" stroke="#64748b" strokeWidth="1.5" />
-                      {/* Cab */}
-                      <rect x="8" y="-6" width="6" height="12" fill="#cbd5e1" stroke="#64748b" strokeWidth="1" />
-                      <rect x="10" y="-4" width="3" height="8" fill="url(#glass)" />
-                      
-                      {/* Red cross on top */}
-                      <circle cx="-4" cy="0" r="5" fill="#fff" stroke="#e2e8f0" />
-                      <rect x="-5.5" y="-3" width="3" height="6" fill="#ef4444" />
-                      <rect x="-7" y="-1.5" width="6" height="3" fill="#ef4444" />
-                      
-                      <circle cx="-4" cy="0" r="20" fill="#22c55e" opacity="0.1" className="animate-ping" />
-                    </g>
-                  )}
-
-                  {enemy.type === 'mech' && (
-                    <motion.g
-                      initial={{ y: 0 }}
-                      animate={{ y: [0, -6, 0] }}
-                      transition={{ duration: 0.8, repeat: Infinity }}
-                      filter="url(#unitShadow)"
-                    >
-                      {/* Boss warning aura */}
-                      <motion.circle
-                        cx="0" cy="0" r="50"
-                        fill="none"
-                        stroke="#ef4444"
-                        strokeWidth="2"
-                        animate={{ r: [44, 56, 44], opacity: [0.5, 0.15, 0.5] }}
-                        transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-                      />
-                      <circle cx="0" cy="0" r="40" fill="#ef4444" fillOpacity="0.06" />
-                      {/* Mech Legs */}
-                      <path d="M 0 0 L -8 -12 L -14 -12" fill="none" stroke="url(#metal)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M 0 0 L -8 12 L -14 12" fill="none" stroke="url(#metal)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M 0 0 L 10 -12 L 16 -12" fill="none" stroke="url(#camoUrban)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M 0 0 L 10 12 L 16 12" fill="none" stroke="url(#camoUrban)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-                      
-                      {/* Mech Torso */}
-                      <rect x="-14" y="-14" width="28" height="28" rx="4" fill="url(#camoUrban)" stroke="#111" strokeWidth="2" />
-                      
-                      {/* Reactor Core */}
-                      <circle cx="0" cy="0" r="8" fill="#1e293b" />
-                      <circle cx="0" cy="0" r="4" fill="#0ea5e9" filter="url(#neonGlow)" className="animate-pulse" />
-                      
-                      {/* Cockpit */}
-                      <rect x="8" y="-6" width="8" height="12" rx="2" fill="url(#glass)" stroke="#111" />
-                      
-                      {/* Heavy Cannons */}
-                      <rect x="14" y="-18" width="20" height="6" fill="url(#metal)" stroke="#111" strokeWidth="1" />
-                      <rect x="14" y="12" width="20" height="6" fill="url(#metal)" stroke="#111" strokeWidth="1" />
-                      
-                      {/* Laser sights */}
-                      <line x1="34" y1="-15" x2="60" y2="-15" stroke="#ef4444" strokeWidth="0.5" opacity="0.6" />
-                      <line x1="34" y1="15" x2="60" y2="15" stroke="#ef4444" strokeWidth="0.5" opacity="0.6" />
-                    </motion.g>
-                  )}
-
-                </g>
-              ))}
-
-              {/* Render Projectiles */}
-              {gameState.projectiles.map(proj => {
-                 const angle = Math.atan2(proj.targetY - proj.y, proj.targetX - proj.x) * (180 / Math.PI);
-                 return (
-                  <g key={proj.id} transform={`translate(${proj.x}, ${proj.y}) rotate(${angle})`}>
-                    {proj.towerType === 'mitrailleuse' && (
-                      <rect x="-7" y="-1.5" width="14" height="3" rx="1.5" fill="#f97316" filter="url(#neonGlow)" />
-                    )}
-                    {proj.towerType === 'canon' && (
-                      <>
-                        <rect x="-10" y="-2.5" width="10" height="5" rx="1" fill="#1d4ed8" />
-                        <circle cx="3" cy="0" r="5" fill="#3b82f6" filter="url(#neonGlow)" />
-                      </>
-                    )}
-                    {proj.towerType === 'mortier' && (
-                      <>
-                        <circle cx="0" cy="0" r="7" fill="#f59e0b" filter="url(#neonGlow)" opacity="0.9" />
-                        <circle cx="0" cy="0" r="3" fill="#1c0a00" />
-                      </>
-                    )}
-                    {proj.towerType === 'dca' && (
-                      <>
-                        <rect x="-12" y="-1" width="10" height="2" rx="1" fill="#06b6d4" opacity="0.5" />
-                        <rect x="-2" y="-1.5" width="14" height="3" rx="1.5" fill="#06b6d4" filter="url(#neonGlow)" />
-                      </>
-                    )}
-                    {proj.towerType === 'missile' && (
-                      <>
-                        <rect x="-14" y="-1" width="10" height="2" rx="1" fill="#f97316" opacity="0.4" />
-                        <rect x="-4" y="-2.5" width="14" height="5" rx="2" fill="#7f1d1d" />
-                        <polygon points="10,-3 16,0 10,3" fill="#ef4444" filter="url(#neonGlow)" />
-                      </>
-                    )}
-                  </g>
-                 );
-              })}
-              
-              {/* Range ring for selected/built turret */}
-              {selectedTurretId && gameState.turrets[selectedTurretId] && (() => {
-                const t = gameState.turrets[selectedTurretId];
-                return (
-                  <circle
-                    cx={t.x}
-                    cy={t.y}
-                    r={t.range}
-                    fill="rgba(255,255,255,0.04)"
-                    stroke="rgba(255,255,255,0.25)"
-                    strokeWidth="1"
-                    strokeDasharray="6 4"
-                    pointerEvents="none"
-                  />
-                );
-              })()}
-
-              {/* Range preview ring for hovered empty slot */}
-              {selectedTower && hoveredSlotId && !gameState.turrets[hoveredSlotId] && (() => {
-                const slot = TURRET_SLOTS.find(s => s.id === hoveredSlotId);
-                if (!slot) return null;
-                const range = TOWER_CONFIGS[selectedTower].range;
-                return (
-                  <circle
-                    cx={slot.x}
-                    cy={slot.y}
-                    r={range}
-                    fill="rgba(255,255,255,0.05)"
-                    stroke="rgba(255,255,255,0.35)"
-                    strokeWidth="1.5"
-                    strokeDasharray="6 4"
-                    pointerEvents="none"
-                  />
-                );
-              })()}
-
-              {/* Ghost range rings for all empty slots when tower selected */}
-              {selectedTower && TURRET_SLOTS.filter(s => !gameState.turrets[s.id] && s.id !== hoveredSlotId).map(slot => (
-                <circle
-                  key={`ghost-${slot.id}`}
-                  cx={slot.x}
-                  cy={slot.y}
-                  r={TOWER_CONFIGS[selectedTower].range}
-                  fill="none"
-                  stroke="rgba(255,255,255,0.06)"
-                  strokeWidth="1"
-                  strokeDasharray="4 6"
-                  pointerEvents="none"
-                />
-              ))}
-
-              {/* Turret Placements */}
-              <g className="pointer-events-auto">
-                {TURRET_SLOTS.map(slot => {
-                  const turret = gameState.turrets[slot.id];
-                  let rotation = 0;
-                  if (turret && turret.targetId) {
-                    const target = gameState.enemies.find(e => e.id === turret.targetId);
-                    if (target) {
-                      rotation = Math.atan2(target.y - turret.y, target.x - turret.x) * (180 / Math.PI);
-                    }
-                  }
-
-                  return (
-                    <g
-                      key={slot.id}
-                      onMouseEnter={() => setHoveredSlotId(slot.id)}
-                      onMouseLeave={() => setHoveredSlotId(null)}
-                    >
-                      <TurretSlot
-                        x={slot.x}
-                        y={slot.y}
-                        type={turret ? turret.type : 'build'}
-                        level={turret?.level}
-                        rotation={rotation}
-                        disabledUntil={turret?.disabledUntil}
-                        selected={selectedTurretId === slot.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!turret) {
-                            if (selectedTower) {
-                              buildTurret(slot.id, slot.x, slot.y, selectedTower);
-                            }
-                            setSelectedTurretId(null);
-                          } else {
-                            setSelectedTurretId(slot.id);
-                            setSelectedTower(null);
-                          }
-                        }}
-                      />
-                    </g>
-                  );
-                })}
-              </g>
-
-              {/* Render Airstrikes */}
-              {gameState.activeAirstrikes && gameState.activeAirstrikes.map(strike => (
-                <motion.g 
-                  key={strike.id}
-                  initial={{ x: -200 }}
-                  animate={{ x: 1200 }}
-                  transition={{ duration: 3.5, ease: "linear" }}
-                >
-                  {/* Bomber 1 */}
-                  <g transform="translate(0, 100) scale(1.5)" style={{ filter: 'drop-shadow(0px 40px 20px rgba(0,0,0,0.6))' }}>
-                     {/* Fuselage */}
-                     <polygon points="-20,-5 20,0 -20,5" fill="#1c1917" stroke="#111" strokeWidth="1" />
-                     {/* Wings */}
-                     <polygon points="-5,0 -25,-35 5,0 -25,35" fill="#292524" stroke="#111" strokeWidth="1" />
-                     <circle cx="10" cy="0" r="2" fill="#ef4444" filter="url(#neonGlow)" />
-                     
-                     {/* Trail */}
-                     <line x1="-20" y1="-3" x2="-80" y2="-3" stroke="white" strokeWidth="1" opacity="0.3" />
-                     <line x1="-20" y1="3" x2="-80" y2="3" stroke="white" strokeWidth="1" opacity="0.3" />
-                  </g>
-                  {/* Bomber 2 */}
-                  <g transform="translate(-100, 300) scale(1.5)" style={{ filter: 'drop-shadow(0px 40px 20px rgba(0,0,0,0.6))' }}>
-                     <polygon points="-20,-5 20,0 -20,5" fill="#1c1917" stroke="#111" strokeWidth="1" />
-                     <polygon points="-5,0 -25,-35 5,0 -25,35" fill="#292524" stroke="#111" strokeWidth="1" />
-                     <circle cx="10" cy="0" r="2" fill="#ef4444" filter="url(#neonGlow)" />
-                     <line x1="-20" y1="-3" x2="-80" y2="-3" stroke="white" strokeWidth="1" opacity="0.3" />
-                     <line x1="-20" y1="3" x2="-80" y2="3" stroke="white" strokeWidth="1" opacity="0.3" />
-                  </g>
-                  {/* Bomber 3 */}
-                  <g transform="translate(-150, 500) scale(1.5)" style={{ filter: 'drop-shadow(0px 40px 20px rgba(0,0,0,0.6))' }}>
-                     <polygon points="-20,-5 20,0 -20,5" fill="#1c1917" stroke="#111" strokeWidth="1" />
-                     <polygon points="-5,0 -25,-35 5,0 -25,35" fill="#292524" stroke="#111" strokeWidth="1" />
-                     <circle cx="10" cy="0" r="2" fill="#ef4444" filter="url(#neonGlow)" />
-                     <line x1="-20" y1="-3" x2="-80" y2="-3" stroke="white" strokeWidth="1" opacity="0.3" />
-                     <line x1="-20" y1="3" x2="-80" y2="3" stroke="white" strokeWidth="1" opacity="0.3" />
-                  </g>
-                  {/* Giant explosion effect logic would be cool but we can just add a full screen flash animation */}
-                </motion.g>
-              ))}
-              
-              {gameState.activeAirstrikes && gameState.activeAirstrikes.length > 0 && (
-                 <motion.rect
-                   initial={{ opacity: 0 }}
-                   animate={{ opacity: [0, 0.4, 0.1, 0.6, 0] }}
-                   transition={{ duration: 1.5, times: [0, 0.2, 0.4, 0.6, 1], ease: "easeInOut", delay: 0.5 }}
-                   x="0" y="0" width="420" height="780" fill="#f97316" style={{ mixBlendMode: 'color-dodge' }} pointerEvents="none"
-                 />
-              )}
-
-            </svg>
-
-
-            {/* Particles / Lights over the map */}
-            <div className="absolute inset-0 pointer-events-none">
-              <motion.div 
-                 animate={{ opacity: [0, 0.8, 0], y: [0, -20] }}
-                 transition={{ repeat: Infinity, duration: 4, delay: 1 }}
-                 className="absolute top-[30%] left-[20%] w-1.5 h-1.5 bg-orange-400 rounded-full shadow-[0_0_12px_#fb923c]"
-              ></motion.div>
-              <motion.div 
-                 animate={{ opacity: [0, 0.8, 0], y: [0, -30] }}
-                 transition={{ repeat: Infinity, duration: 5, delay: 2 }}
-                 className="absolute top-[70%] left-[40%] w-1.5 h-1.5 bg-orange-400 rounded-full shadow-[0_0_12px_#fb923c]"
-              ></motion.div>
-              <motion.div 
-                 animate={{ opacity: [0, 0.8, 0], y: [0, -15] }}
-                 transition={{ repeat: Infinity, duration: 3.5, delay: 0 }}
-                 className="absolute top-[50%] right-[30%] w-1.5 h-1.5 bg-orange-400 rounded-full shadow-[0_0_12px_#fb923c]"
-              ></motion.div>
-            </div>
-        </div>
-    )
-}
-
-function TurretSlot({ x, y, type, level, rotation = 0, disabledUntil = 0, selected = false, onClick }: { key?: string, x: number; y: number; type: 'build' | TowerType; level?: number, rotation?: number, disabledUntil?: number, selected?: boolean, onClick?: (e: any) => void }) {
-  if (type === 'build') {
-    return (
-      <g transform={`translate(${x}, ${y})`} onClick={onClick} className="cursor-pointer group">
-         {/* Build Slot Graphics */}
-         <circle cx="0" cy="0" r="24" fill="#ffffff" fillOpacity="0.2" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="4 4" className="opacity-50 group-hover:opacity-100 group-hover:fill-[#3b82f6] group-hover:fill-opacity-30 transition-all" />
-         <circle cx="0" cy="0" r="14" fill="none" stroke="#2563eb" strokeWidth="1" className="opacity-40 group-hover:opacity-100" />
-         <path d="M -6 0 L 6 0 M 0 -6 L 0 6" stroke="#1d4ed8" strokeWidth="2" className="opacity-70 group-hover:opacity-100" />
-         <circle cx="0" cy="0" r="3" fill="#1d4ed8" className="opacity-80 group-hover:opacity-100 group-hover:scale-125 transition-transform" />
-         <text x="0" y="36" textAnchor="middle" fill="#1d4ed8" fontSize="9" fontWeight="bold" className="opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest bg-white/50 px-1 rounded">DÉPLOYER</text>
-      </g>
-    )
   }
 
-  // Built Turret
-  let accentColor = "#ef4444";
-  if (type === 'mitrailleuse') accentColor = "#f97316";
-  else if (type === 'canon') accentColor = "#3b82f6";
-  else if (type === 'mortier') accentColor = "#f59e0b";
-  else if (type === 'dca') accentColor = "#06b6d4";
-
-  const isDisabled = disabledUntil > performance.now();
-  const showGlow = selected || isDisabled;
-
-  return (
-    <g transform={`translate(${x}, ${y})`} onClick={onClick} className="cursor-pointer group">
-      {/* Subtle Pulsing Glow Effect */}
-      {showGlow && (
-        <circle cx="0" cy="0" r="26" fill={isDisabled ? "#3b82f6" : accentColor} fillOpacity="0.25" className="animate-pulse drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" filter="url(#neonGlow)" />
-      )}
-
-      {/* Platform/Base */}
-      {selected && (
-        <g>
-          <circle cx="0" cy="0" r="28" fill="none" stroke="#fff" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[spin_4s_linear_infinite] opacity-80" />
-          <circle cx="0" cy="0" r="30" fill="none" stroke={accentColor} strokeWidth="1" className="opacity-40" />
-        </g>
-      )}
-
-      {/* Upgrade Visual Effects */}
-      {(level || 1) >= 2 && (
-        <circle cx="0" cy="0" r="16" fill="none" stroke={accentColor} strokeWidth="3" className="opacity-20 animate-pulse" />
-      )}
-      {(level || 1) >= 3 && (
-        <g className="animate-[spin_4s_linear_infinite]">
-          <circle cx="0" cy="0" r="22" fill="none" stroke={accentColor} strokeWidth="1" strokeDasharray="4 8" className="opacity-40" />
-          <circle cx="0" cy="0" r="24" fill="none" stroke={accentColor} strokeWidth="0.5" strokeDasharray="2 4" className="opacity-30" />
-        </g>
-      )}
-      {(level || 1) >= 4 && (
-        <g className="animate-[spin_3s_linear_reverse_infinite]">
-           <circle cx="0" cy="0" r="18" fill="none" stroke={accentColor} strokeWidth="2" strokeDasharray="1 6" className="opacity-60" />
-        </g>
-      )}
-      {(level || 1) >= 5 && (
-         <circle cx="0" cy="0" r="30" fill={accentColor} className="opacity-10 animate-ping" />
-      )}
-
-      <rect x="-18" y="-18" width="36" height="36" rx="6" fill="#2d160c" stroke={accentColor} strokeWidth={selected ? "2.5" : "1.5"} className={`drop-shadow-xl opacity-90 group-hover:opacity-100 transition-all ${(level || 1) >= 3 ? "shadow-[0_0_15px_currentColor]" : ""}`} style={{ color: accentColor }} />
-      <circle cx="0" cy="0" r="14" fill="#030704" stroke="#111" strokeWidth="1" />
+  const generateWithConstraints = (minDistToPath: number, maxDistToPath: number, minDistBetweenSlots: number) => {
+    const list: { x: number; y: number }[] = [];
+    const stepCount = 28; // Increase density to maximize coverage
+    
+    for (let i = 1; i <= stepCount; i++) {
+      // Progress between 8% and 92% along the path length
+      const progressRatio = 0.08 + (i / (stepCount + 1)) * 0.84;
+      const index = Math.floor(progressRatio * (points.length - 1));
+      const p = points[index];
       
-      {/* Level Indicator Stars/Chevrons */}
-      {(level || 1) > 1 && (
-        <g transform={`translate(0, 15)`} className="opacity-90">
-          <rect x={-8 - (((level || 1)-1) * 3)} y="-2" width={16 + (((level || 1)-1) * 6)} height="4" rx="2" fill="#000" opacity="0.6" />
-          {[...Array((level || 1) - 1)].map((_, i, arr) => {
-            const numStars = arr.length;
-            const xOffset = numStars === 1 ? 0 : -4 * (numStars - 1) + (i * 8);
-            return (
-              <polygon key={i} points="0,-1 1,1 -1,1" transform={`translate(${xOffset}, 0) scale(1.5)`} fill="#fbbf24" />
-            )
-          })}
-        </g>
-      )}
+      // Calculate tangent vector
+      const pPrev = points[Math.max(0, index - 5)];
+      const pNext = points[Math.min(points.length - 1, index + 5)];
+      const dx = pNext.x - pPrev.x;
+      const dy = pNext.y - pPrev.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      
+      if (len === 0) continue;
+      
+      const tx = dx / len;
+      const ty = dy / len;
+      const nx = -ty; // Normal vector on one side
+      const ny = tx;
+      
+      // Test both left and right sides of the track
+      const distances = [74, -74];
+      for (const dist of distances) {
+        const cx = p.x + nx * dist;
+        const cy = p.y + ny * dist;
+        
+        // 1. Boundary check: leave padding around the SVG margins
+        if (cx < 55 || cx > 969 || cy < -60 || cy > 930) {
+          continue;
+        }
+        
+        // 2. Clear of other parts of the track check
+        // We ensure that this slot doesn't sit on top of any other part of the winding track.
+        let overlapsTrack = false;
+        // Sample every 4th point of the path for high speed and accuracy
+        for (let j = 0; j < points.length; j += 4) {
+          const distToTrack = Math.hypot(cx - points[j].x, cy - points[j].y);
+          if (distToTrack < minDistToPath) {
+            overlapsTrack = true;
+            break;
+          }
+        }
+        if (overlapsTrack) continue;
+        
+        // 3. Clear of previously placed slots check
+        let tooCloseToSlot = false;
+        for (const existing of list) {
+          const distToSlot = Math.hypot(cx - existing.x, cy - existing.y);
+          if (distToSlot < minDistBetweenSlots) {
+            tooCloseToSlot = true;
+            break;
+          }
+        }
+        if (tooCloseToSlot) continue;
+        
+        // Standard slot candidate matches!
+        list.push({ x: Math.round(cx), y: Math.round(cy) });
+      }
+    }
+    return list;
+  };
 
-      {/* Turret Body (Point towards target, default 0 or constantly rotating) */}
-      <motion.g 
-        animate={{ rotate: rotation }} 
-        transition={{ duration: 0.1, ease: "linear" }} 
-        style={{ transformOrigin: '0px 0px' }}
-      >
-        {type === 'mitrailleuse' && (
-           <g>
-             <rect x="0" y="-5" width="18" height="3" fill="#111" stroke="#222" strokeWidth="1" />
-             <rect x="0" y="2" width="18" height="3" fill="#111" stroke="#222" strokeWidth="1" />
-             <circle cx="0" cy="0" r="9" fill="#1a2e21" stroke={accentColor} strokeWidth="2" />
-           </g>
-        )}
-        {type === 'canon' && (
-           <g>
-             <rect x="0" y="-4" width="22" height="8" fill="#0a1220" stroke="#111" strokeWidth="1" />
-             <rect x="18" y="-5" width="6" height="10" fill="#030710" stroke={accentColor} strokeWidth="1" />
-             <circle cx="0" cy="0" r="11" fill="#102030" stroke={accentColor} strokeWidth="2" />
-             <rect x="-6" y="-8" width="4" height="16" fill="#1a2030" rx="1" />
-           </g>
-        )}
-        {type === 'mortier' && (
-           <g>
-             <circle cx="0" cy="0" r="12" fill="#451a03" stroke={accentColor} strokeWidth="2" />
-             <circle cx="0" cy="0" r="6" fill="#000" />
-             <rect x="-14" y="-2" width="28" height="4" fill="#78350f" opacity="0.8" />
-             <rect x="-2" y="-14" width="4" height="28" fill="#78350f" opacity="0.8" />
-             <circle cx="0" cy="0" r="2" fill={accentColor} opacity="0.7" />
-           </g>
-        )}
-        {type === 'missile' && (
-           <g>
-             <rect x="-8" y="-10" width="16" height="20" rx="2" fill="#450a0a" stroke={accentColor} strokeWidth="1.5" />
-             <rect x="-5" y="-8" width="4" height="6" fill="#7f1d1d" />
-             <rect x="1" y="-8" width="4" height="6" fill="#7f1d1d" />
-             <rect x="-5" y="2" width="4" height="6" fill="#7f1d1d" />
-             <rect x="1" y="2" width="4" height="6" fill="#7f1d1d" />
-           </g>
-        )}
-        {type === 'dca' && (
-           <g>
-             <circle cx="0" cy="0" r="10" fill="#083344" stroke={accentColor} strokeWidth="2" />
-             <rect x="2" y="-16" width="3" height="20" fill="#164e63" stroke="#000" strokeWidth="1" />
-             <rect x="2" y="-16" width="1" height="6" fill="#67e8f9" />
-             <rect x="-5" y="-16" width="3" height="20" fill="#164e63" stroke="#000" strokeWidth="1" />
-             <rect x="-5" y="-16" width="1" height="6" fill="#67e8f9" />
-           </g>
-        )}
-      </motion.g>
+  // PASS 1: Tactical high-quality spacing constraints
+  let generatedCoords = generateWithConstraints(62, 85, 105);
+  
+  // PASS 2: If we didn't find enough slots (below 14), relax spacing constraints to fit more
+  if (generatedCoords.length < 14) {
+    generatedCoords = generateWithConstraints(56, 90, 85);
+  }
+  
+  // PASS 3: Fallback if still too low (extremely wild path shapes)
+  if (generatedCoords.length < 10) {
+    generatedCoords = generateWithConstraints(48, 100, 70);
+  }
 
-      {/* Level indicator */}
-      <rect x="-11" y="-32" width="22" height="12" rx="2" fill="#000" stroke={accentColor} strokeWidth="0.5" className="opacity-80 drop-shadow-md" />
-      <text x="0" y="-23" textAnchor="middle" fill="#fff" fontSize="8" fontWeight="bold">L{level}</text>
+  // Convert to formatted objects with stable IDs
+  return generatedCoords.slice(0, 18).map((coord, idx) => ({
+    id: String(idx + 1),
+    x: coord.x,
+    y: coord.y
+  }));
+};
 
-      {/* Disabled / EMP status overlay */}
-      {isDisabled && (
+const StaticBackground = React.memo(({ level, theme, isNight }: { level: number, theme: any, isNight: boolean }) => {
+    const pathD = getRawPathForLevel(level);
+
+    // Generate deterministic battlefield structures
+    const battleDecorations = useMemo(() => {
+        const random = getSeededRandom(level * 22 + 91);
+        const decs = [];
+        // Ruined buildings, command posts, crash sites
+        for (let i = 0; i < 5; i++) {
+            decs.push({
+                type: 'bunker',
+                x: Math.floor(random() * 800) + 110,
+                y: Math.floor(random() * 800) + 100,
+                w: Math.floor(random() * 45) + 35,
+                h: Math.floor(random() * 40) + 30,
+                rot: Math.floor(random() * 360)
+            });
+        }
+        // Sandbag wall blocks
+        for (let i = 0; i < 4; i++) {
+            decs.push({
+                type: 'sandbag',
+                x: Math.floor(random() * 820) + 100,
+                y: Math.floor(random() * 810) + 100,
+                len: Math.floor(random() * 35) + 25,
+                rot: Math.floor(random() * 180)
+            });
+        }
+        // Shell Crates / Camo tents
+        for (let i = 0; i < 4; i++) {
+            decs.push({
+                type: 'tent',
+                x: Math.floor(random() * 820) + 100,
+                y: Math.floor(random() * 810) + 100,
+                size: Math.floor(random() * 25) + 15,
+                rot: Math.floor(random() * 360)
+            });
+        }
+        // Shell/Explosion Craters from artillery fire
+        for (let i = 0; i < 5; i++) {
+            decs.push({
+                type: 'crater',
+                cx: Math.floor(random() * 840) + 90,
+                cy: Math.floor(random() * 820) + 90,
+                rx: Math.floor(random() * 18) + 10,
+                ry: Math.floor(random() * 12) + 6,
+                angle: Math.floor(random() * 360)
+            });
+        }
+        // Anti-tank metal hedgehogs (les barrières en croix métalliques)
+        for (let i = 0; i < 6; i++) {
+            decs.push({
+                type: 'hedgehog',
+                x: Math.floor(random() * 800) + 110,
+                y: Math.floor(random() * 800) + 110,
+                scale: 0.6 + random() * 0.4
+            });
+        }
+        return decs;
+    }, [level]);
+
+    return (
         <g>
-          <circle cx="0" cy="0" r="16" fill="#3b82f6" fillOpacity="0.2" className="animate-ping" />
-          <path d="M -10 -10 L 10 10 M -10 10 L 10 -10" stroke="#60a5fa" strokeWidth="3" opacity="0.8" />
+            {/* Battlefield mud/charcoal soil */}
+            <rect x="0" y="-120" width="1024" height="1240" fill={theme.floor} />
+
+            {/* Tactical grid markings for warfare screen feel */}
+            <g opacity={isNight ? "0.12" : "0.06"}>
+                {Array.from({ length: 11 }).map((_, i) => (
+                    <line key={`lh-${i}`} x1="0" y1={-100 + i * 110} x2="1024" y2={-100 + i * 110} stroke="#94a3b8" strokeWidth="1" />
+                ))}
+                {Array.from({ length: 11 }).map((_, i) => (
+                    <line key={`lv-${i}`} x1={i * 102.4} y1="-100" x2={i * 102.4} y2="1100" stroke="#94a3b8" strokeWidth="1" />
+                ))}
+            </g>
+
+            {/* Scorched shell craters from heavy bombardment */}
+            {battleDecorations.filter(d => d.type === 'crater').map((crater: any, idx) => (
+                <g key={`crater-${idx}`} transform={`translate(${crater.cx}, ${crater.cy}) rotate(${crater.angle})`}>
+                    {/* Ring burn mark */}
+                    <ellipse cx="0" cy="0" rx={crater.rx + 6} ry={crater.ry + 5} fill="none" stroke="#18130e" strokeWidth="3" opacity="0.3" />
+                    {/* Center deep indentation */}
+                    <ellipse cx="0" cy="0" rx={crater.rx} ry={crater.ry} fill="#14110f" opacity="0.75" />
+                    <ellipse cx="0" cy="0" rx={crater.rx * 0.4} ry={crater.ry * 0.4} fill="#090807" />
+                </g>
+            ))}
+
+            {/* Military tactical tents / crates with camo nets */}
+            {battleDecorations.filter(d => d.type === 'tent').map((tent: any, idx) => (
+                <g key={`tent-${idx}`} transform={`translate(${tent.x}, ${tent.y}) rotate(${tent.rot})`}>
+                    {/* Camouflage shadow */}
+                    <rect x={-tent.size - 4} y={-tent.size / 2 - 2} width={tent.size * 2 + 8} height={tent.size + 4} rx="2" fill="rgba(0,0,0,0.22)" />
+                    {/* Main tactical container or shelter */}
+                    <rect x={-tent.size} y={-tent.size / 2} width={tent.size * 2} height={tent.size} rx="1.5" fill="#3f4e3c" stroke="#252d23" strokeWidth="2" />
+                    {/* Camo netting lines */}
+                    <path d={`M ${-tent.size} ${-tent.size/2} L ${tent.size} ${tent.size/2} M ${-tent.size} ${tent.size/2} L ${tent.size} ${-tent.size/2}`} stroke="#5c7157" strokeWidth="1.5" strokeDasharray="3 3" />
+                    {/* Ammo stencil */}
+                    <line x1={-tent.size * 0.4} y1="0" x2={tent.size * 0.4} y2="0" stroke="#fbbf24" strokeWidth="1.2" />
+                </g>
+            ))}
+
+            {/* Fortified military concrete bunkers / headquarters coordinates */}
+            {battleDecorations.filter(d => d.type === 'bunker').map((bunker: any, idx) => (
+                <g key={`bunker-${idx}`} transform={`translate(${bunker.x}, ${bunker.y}) rotate(${bunker.rot})`}>
+                    {/* Drop shadow */}
+                    <rect x={-bunker.w/2 - 3} y={-bunker.h/2 - 2} width={bunker.w + 6} height={bunker.h + 5} rx="4" fill="rgba(0,0,0,0.3)" />
+                    {/* Concrete plate block */}
+                    <rect x={-bunker.w/2} y={-bunker.h/2} width={bunker.w} height={bunker.h} rx="3" fill="#4d535e" stroke="#282a30" strokeWidth="2.5" />
+                    {/* Bullet slits and metal hatch */}
+                    <rect x={-bunker.w * 0.35} y={-bunker.h * 0.15} width={bunker.w * 0.7} height={bunker.h * 0.3} rx="1" fill="#18191c" />
+                    {/* Warning yellow and black hazard lines */}
+                    <path d={`M ${-bunker.w/2 + 4} ${bunker.h/2 - 3} L ${-bunker.w/2 + 12} ${bunker.h/2 - 3}`} stroke="#facc15" strokeWidth="2" />
+                    <path d={`M ${bunker.w/2 - 12} ${bunker.h/2 - 3} L ${bunker.w/2 - 4} ${bunker.h/2 - 3}`} stroke="#facc15" strokeWidth="2" />
+                </g>
+            ))}
+
+            {/* Czech Hedgehog anti-tank barrières */}
+            {battleDecorations.filter(d => d.type === 'hedgehog').map((hedg: any, idx) => (
+                <g key={`hedgehog-${idx}`} transform={`translate(${hedg.x}, ${hedg.y}) scale(${hedg.scale})`}>
+                    {/* Soft under-shadow */}
+                    <ellipse cx="0" cy="4" rx="10" ry="3" fill="rgba(0,0,0,0.2)" />
+                    {/* Cross steel profiles */}
+                    <line x1="-12" y1="-8" x2="12" y2="8" stroke="#1f242e" strokeWidth="4.5" strokeLinecap="round" />
+                    <line x1="12" y1="-8" x2="-12" y2="8" stroke="#1f242e" strokeWidth="4.5" strokeLinecap="round" />
+                    <line x1="0" y1="-12" x2="0" y2="12" stroke="#2e3545" strokeWidth="4.5" strokeLinecap="round" />
+                    {/* Small center weld rivet */}
+                    <circle cx="0" cy="0" r="2.5" fill="#3f485c" />
+                </g>
+            ))}
+
+            {/* Sandbag barricade protection lines */}
+            {battleDecorations.filter(d => d.type === 'sandbag').map((sandbg: any, idx) => (
+                <g key={`sandbag-${idx}`} transform={`translate(${sandbg.x}, ${sandbg.y}) rotate(${sandbg.rot})`}>
+                    <path
+                        d={`M ${-sandbg.len/2} 0 Q 0 -5 ${sandbg.len/2} 0`}
+                        stroke="#8c7853"
+                        strokeWidth="7"
+                        strokeLinecap="round"
+                        fill="none"
+                        opacity="0.95"
+                    />
+                    <path
+                        d={`M ${-sandbg.len/2} 0 Q 0 -5 ${sandbg.len/2} 0`}
+                        stroke="#605135"
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                        strokeDasharray="4 4"
+                        fill="none"
+                        opacity="0.4"
+                    />
+                </g>
+            ))}
+
+            {/* Broad combat warway supply track underlay (asphalt/dust concrete route) */}
+            <path
+                d={pathD}
+                stroke={isNight ? '#0b0c0f' : '#1e1c18'}
+                strokeWidth="116"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            {/* The main reinforced war road structure */}
+            <path
+                d={pathD}
+                stroke="#453d34"
+                strokeWidth="102"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            {/* Tactical grid asphalt center plate track */}
+            <path
+                d={pathD}
+                stroke="#252424"
+                strokeWidth="88"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            {/* Military caution stripe hazard margins on tracks */}
+            <path
+                d={pathD}
+                stroke="#eab308"
+                strokeWidth="84"
+                fill="none"
+                strokeDasharray="14 45"
+                strokeLinecap="butt"
+                strokeLinejoin="round"
+                opacity="0.55"
+            />
+            {/* Tank tires tread marks carved in the concrete road */}
+            <path
+                d={pathD}
+                stroke="#121212"
+                strokeWidth="72"
+                fill="none"
+                strokeDasharray="4 8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity="0.65"
+            />
         </g>
-      )}
-    </g>
-  );
+    );
+});
+
+const EnemyEntity = React.memo(({ enemy }: { enemy: Enemy }) => {
+    const rotation = enemy.rotation || 0;
+    const progress = enemy.progress;
+
+    return (
+        <g 
+            transform={`translate(${enemy.x}, ${enemy.y}) rotate(${rotation})`}
+            opacity={progress < 100 ? progress / 100 : 1}
+        >
+            {/* Soft metallic real shadow layout */}
+            <ellipse cx="0" cy="14" rx={enemy.isBoss ? "34" : "15"} ry={enemy.isBoss ? "12" : "6"} fill="rgba(10, 10, 10, 0.45)" />
+            
+            {/* Highly Realistic 100% Military Warfare Units */}
+            {enemy.isBoss || enemy.type === 'mech' ? (
+                // 1. HUGE BIPEDAL WALKER MECH OR MAMMOTH SIEGE FORTRESS
+                <g transform="scale(1.3)">
+                    {/* Shadow footprint plates */}
+                    <rect x="-24" y="-20" width="48" height="40" fill="none" />
+                    {/* Bipedal heavy armored leg hinges */}
+                    <line x1="-16" y1="0" x2="-22" y2="12" stroke="#1f2937" strokeWidth="4.5" strokeLinecap="round" />
+                    <line x1="16" y1="0" x2="22" y2="12" stroke="#1f2937" strokeWidth="4.5" strokeLinecap="round" />
+                    <circle cx="-22" cy="12" r="5" fill="#374151" stroke="#111827" strokeWidth="2" />
+                    <circle cx="22" cy="12" r="5" fill="#374151" stroke="#111827" strokeWidth="2" />
+                    
+                    {/* Huge reinforced steel hull chassis */}
+                    <path d="M-20,-16 L20,-16 L24,2 L18,12 L-18,12 L-24,2 Z" fill="#4b5563" stroke="#111827" strokeWidth="2.5" />
+                    {/* Dark camouflage patterns */}
+                    <path d="M-14,-13 L-1, -12 L-6, 4 L-15, 6 Z" fill="#2d3748" opacity="0.4" />
+                    <path d="M4,-4 L15, -6 L18, 10 L8, 9 Z" fill="#1a202c" opacity="0.4" />
+                    
+                    {/* Glowing yellow hazard paint and rivets */}
+                    <rect x="-18" y="-12" width="4" height="6" fill="#f59e0b" />
+                    <rect x="14" y="-12" width="4" height="6" fill="#f59e0b" />
+                    
+                    {/* Shoulder rocket battery module left */}
+                    <rect x="-25" y="-10" width="8" height="15" rx="1.5" fill="#374151" stroke="#111827" strokeWidth="1.5" />
+                    <circle cx="-21" cy="-6" r="1.5" fill="#ef4444" />
+                    <circle cx="-21" cy="-1" r="1.5" fill="#ef4444" />
+                    {/* Shoulder gatling cannon module right */}
+                    <rect x="17" y="-10" width="8" height="15" rx="1.5" fill="#374151" stroke="#111827" strokeWidth="1.5" />
+                    <line x1="21" y1="-8" x2="21" y2="12" stroke="#111827" strokeWidth="2.5" />
+
+                    {/* Central glowing electronic eye */}
+                    <circle cx="0" cy="-2" r="4" fill="#1e293b" stroke="#111827" strokeWidth="1.5" />
+                    <circle cx="0" cy="-2" r="2" fill="#ef4444" className="animate-pulse" />
+                    
+                    {/* Massive double battle barrels sticking forward */}
+                    <line x1="-5" y1="-14" x2="-5" y2="-32" stroke="#111827" strokeWidth="3.5" />
+                    <line x1="5" y1="-14" x2="5" y2="-32" stroke="#111827" strokeWidth="3.5" />
+                    {/* Muzzle brakes */}
+                    <rect x="-7" y="-34" width="4" height="3" fill="#111827" />
+                    <rect x="3" y="-34" width="4" height="3" fill="#111827" />
+                </g>
+            ) : enemy.type === 'tank' || enemy.type === 'heavy_tank' ? (
+                // 2. MAIN REALISTIC BATTLE TANK
+                <g transform="scale(1.22)">
+                    {/* Left and right caterpillar track systems */}
+                    <rect x="-16" y="-18" width="7" height="36" rx="2" fill="#1f2937" stroke="#111827" strokeWidth="2" />
+                    <rect x="9" y="-18" width="7" height="36" rx="2" fill="#1f2937" stroke="#111827" strokeWidth="2" />
+                    {/* Track rib markings */}
+                    {Array.from({ length: 9 }).map((_, i) => (
+                        <g key={`tr-${i}`}>
+                            <line x1="-15" y1={-15 + i * 4} x2="-10" y2={-15 + i * 4} stroke="#111827" strokeWidth="1.2" />
+                            <line x1="10" y1={-15 + i * 4} x2="15" y2={-15 + i * 4} stroke="#111827" strokeWidth="1.2" />
+                        </g>
+                    ))}
+                    {/* Massive armored hull */}
+                    <rect x="-11" y="-17" width="22" height="32" rx="3.5" fill="#374151" stroke="#111827" strokeWidth="2.2" />
+                    {/* Camouflage layout */}
+                    <path d="M-8,-12 L2, -6 L-10, 10 Z" fill="#20293a" opacity="0.45" />
+                    <path d="M5,-12 L11, -8 L3, 6 L6, 12 Z" fill="#111827" opacity="0.4" />
+                    
+                    {/* Armor plate bolts */}
+                    <circle cx="-8" cy="-14" r="0.8" fill="#9ca3af" />
+                    <circle cx="8" cy="-14" r="0.8" fill="#9ca3af" />
+                    <circle cx="-8" cy="12" r="0.8" fill="#9ca3af" />
+                    <circle cx="8" cy="12" r="0.8" fill="#9ca3af" />
+
+                    {/* Highly-detailed rotating main turret center hatch */}
+                    <circle cx="0" cy="-2" r="7.5" fill="#1f2937" stroke="#111827" strokeWidth="2" />
+                    <rect x="-4.5" y="-5" width="9" height="5.5" rx="1.5" fill="#374151" stroke="#111827" strokeWidth="1.5" />
+                    
+                    {/* Super thick tank artillery barrel barrel */}
+                    <line x1="0" y1="-4" x2="0" y2="-28" stroke="#111827" strokeWidth="3.2" strokeLinecap="butt" />
+                    {/* Muzzle tip blast suppressor */}
+                    <rect x="-2.2" y="-31" width="4.4" height="4.2" fill="#111827" rx="1" />
+                    {/* Active target searchlight */}
+                    <polygon points="-4,-12 -12,-30 4,-30" fill="rgba(252,211,77,0.08)" pointerEvents="none" />
+                </g>
+            ) : enemy.type === 'stealth_heli' || enemy.type === 'jet' || enemy.type === 'bomber' || enemy.isFlying ? (
+                // 3. STEALTH MILITARY STRIKE COMBAT FLYING UNIT (JET / COPTER / DRONE)
+                <g transform="scale(1.2)">
+                    {/* Big swept stealth charcoal wings */}
+                    <polygon points="0,-22 -32,2 -4,12 0,16" fill="#1e293b" stroke="#0f172a" strokeWidth="2" />
+                    <polygon points="0,-22 32,2 4,12 0,16" fill="#1e293b" stroke="#0f172a" strokeWidth="2" />
+                    {/* Jet thrust vectoring body */}
+                    <path d="M-6,-22 L6,-22 L8,14 L4,22 L-4,22 L-8,14 Z" fill="#0f172a" stroke="#1e293b" strokeWidth="1.5" />
+                    
+                    {/* Under-wing rocket pods */}
+                    <rect x="-22" y="-5" width="4.5" height="11" fill="#475569" stroke="#0f172a" strokeWidth="1" />
+                    <rect x="17.5" y="-5" width="4.5" height="11" fill="#475569" stroke="#0f172a" strokeWidth="1" />
+                    {/* Red threat markers on rockets */}
+                    <circle cx="-19.75" cy="8" r="1.2" fill="#ef4444" />
+                    <circle cx="19.75" cy="8" r="1.2" fill="#ef4444" />
+
+                    {/* Cockpit safety glass (Neon cyan visor) */}
+                    <polygon points="0,-16 -3,-5 3,-5" fill="#06b6d4" opacity="0.8" />
+                    {/* Twin jet afterburners */}
+                    <circle cx="-3" cy="23" r="3" fill="#ea580c" className="animate-pulse" />
+                    <circle cx="3" cy="23" r="3" fill="#ea580c" className="animate-pulse" />
+                    <circle cx="-3" cy="23" r="1.5" fill="#facc15" />
+                    <circle cx="3" cy="23" r="1.5" fill="#facc15" />
+
+                    {/* Helicopter spinning blade silhouettes overlay if helicopter */}
+                    {(enemy.type === 'stealth_heli' || enemy.isFlying) && (
+                        <g className="animate-spin" style={{ transformOrigin: '0px -5px', animationDuration: '0.15s' }}>
+                            <line x1="-38" y1="-5" x2="38" y2="-5" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+                            <line x1="0" y1="-43" x2="0" y2="33" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+                        </g>
+                    )}
+                </g>
+            ) : enemy.type === 'apc' || enemy.type === 'medic_truck' || enemy.isArmored ? (
+                // 4. MULTI-WHEELED (8X8) HEAVY ARMORED PERSONNEL CARRIER / MEDIC TRUCK
+                <g transform="scale(1.15)">
+                    {/* 8 tactical heavy wheels */}
+                    {[-14, -5, 4, 13].map((v) => (
+                        <g key={`wh-${v}`}>
+                            <rect x="-12.5" y={v - 2.5} width="4" height="5" rx="1.2" fill="#111827" />
+                            <rect x="8.5" y={v - 2.5} width="4" height="5" rx="1.2" fill="#111827" />
+                        </g>
+                    ))}
+                    {/* Armored angular chassis */}
+                    <polygon points="-9,-18 9,-18 10,18 -10,18" fill={enemy.type === 'medic_truck' ? "#d1d5db" : "#2e3b2e"} stroke="#111827" strokeWidth="2.2" />
+                    
+                    {/* Camouflage patterning */}
+                    {enemy.type !== 'medic_truck' && (
+                        <path d="M-6,-12 L4, -10 L1, 4 L-8, 6 Z" fill="#111827" opacity="0.35" />
+                    )}
+
+                    {/* White steel panels with cross if Medic, steel hatch with machine gun if APC */}
+                    {enemy.type === 'medic_truck' ? (
+                        <g>
+                            {/* Medical red / orange cruz shield */}
+                            <rect x="-4" y="-3" width="8" height="8" fill="#ffffff" stroke="#ef4444" strokeWidth="1" />
+                            <path d="M-2,1 L2,1 M0,-1 L0,3" stroke="#ef4444" strokeWidth="2" strokeLinecap="square" />
+                            {/* Blue beacon sirens */}
+                            <circle cx="-5" cy="-14" r="2.5" fill="#3b82f6" className="animate-ping" />
+                            <circle cx="-5" cy="-14" r="1.8" fill="#2563eb" />
+                            <circle cx="5" cy="-14" r="1.8" fill="#ef4444" />
+                        </g>
+                    ) : (
+                        <g>
+                            {/* Small offensive gun mount */}
+                            <circle cx="0" cy="2" r="5" fill="#1e293b" stroke="#111827" strokeWidth="1.5" />
+                            <line x1="0" y1="2" x2="0" y2="-12" stroke="#111827" strokeWidth="2.4" />
+                            {/* Anti-RPG fence armor slats on the tail */}
+                            <rect x="-7.5" y="14" width="15" height="5" fill="none" stroke="#111827" strokeWidth="1.2" strokeDasharray="2 2" />
+                        </g>
+                    )}
+
+                    {/* Windshield protection hatches */}
+                    <rect x="-6" y="-15" width="4" height="2" fill="#1e293b" />
+                    <rect x="2" y="-15" width="4" height="2" fill="#1e293b" />
+                </g>
+            ) : enemy.type === 'jeep' || enemy.type === 'buggy' ? (
+                // 5. CAMOUFLAGE LIGHT COMBAT SCOUT JEEP / RECON BUGGY
+                <g transform="scale(1.12)">
+                    {/* Dirt knobby tires */}
+                    <rect x="-11" y="-14" width="4" height="7" rx="1.5" fill="#0f172a" />
+                    <rect x="7" y="-14" width="4" height="7" rx="1.5" fill="#0f172a" />
+                    <rect x="-11" y="7" width="4" height="7" rx="1.5" fill="#0f172a" />
+                    <rect x="7" y="7" width="4" height="7" rx="1.5" fill="#0f172a" />
+                    
+                    {/* Jeep sand camo body */}
+                    <rect x="-8.5" y="-11" width="17" height="22" rx="3" fill="#78716c" stroke="#1c1917" strokeWidth="1.8" />
+                    <path d="M-6,-8 L2, -6 L-4, 5 Z" fill="#44403c" opacity="0.45" />
+
+                    {/* Roll bars cage tubing */}
+                    <line x1="-6.5" y1="-8" x2="-6.5" y2="6" stroke="#1c1917" strokeWidth="1.8" />
+                    <line x1="6.5" y1="-8" x2="6.5" y2="6" stroke="#1c1917" strokeWidth="1.8" />
+                    <line x1="-6.5" y1="-2" x2="6.5" y2="-2" stroke="#1c1917" strokeWidth="1.5" />
+                    
+                    {/* Machine gunner barrel on back */}
+                    <circle cx="0" cy="3" r="3" fill="#1c1917" />
+                    <line x1="0" y1="3" x2="0" y2="-15" stroke="#1c1917" strokeWidth="2" />
+                    <rect x="-1" y="-17" width="2" height="3" fill="#facc15" /> {/* Muzzle spark */}
+                </g>
+            ) : (
+                // 6. TACTICAL INFANTRY SQUAD (3 SOLDIERS WALKING EN FORMATION)
+                <g>
+                    {/* Soldier 1 (Center Front) */}
+                    <g transform="translate(0, -6)">
+                        <circle cx="0" cy="0" r="4.2" fill="#455a64" stroke="#1a237e" strokeWidth="1" />
+                        <rect x="-3" y="1" width="6" height="6" rx="1.5" fill="#37474f" />
+                        {/* Camo helmet cover and gun barrel */}
+                        <path d="M-2,-3 L2,-3 L1,-4 C0.5,-5.5 -0.5,-5.5 -1,-4 Z" fill="#1b5e20" />
+                        <line x1="2" y1="3" x2="7" y2="3" stroke="#212121" strokeWidth="1.5" />
+                    </g>
+                    {/* Soldier 2 (Back Left) */}
+                    <g transform="translate(-10, 4) scale(0.9)">
+                        <circle cx="0" cy="0" r="4.2" fill="#455a64" stroke="#1a237e" strokeWidth="1" />
+                        <rect x="-3" y="1" width="6" height="6" rx="1.5" fill="#37474f" />
+                        <path d="M-2,-3 L2,-3 L1,-4 C0.5,-5.5 -0.5,-5.5 -1,-4 Z" fill="#1b5e20" />
+                    </g>
+                    {/* Soldier 3 (Back Right) */}
+                    <g transform="translate(10, 4) scale(0.9)">
+                        <circle cx="0" cy="0" r="4.2" fill="#455a64" stroke="#1a237e" strokeWidth="1" />
+                        <rect x="-3" y="1" width="6" height="6" rx="1.5" fill="#37474f" />
+                        <path d="M-2,-3 L2,-3 L1,-4 C0.5,-5.5 -0.5,-5.5 -1,-4 Z" fill="#1b5e20" />
+                    </g>
+                </g>
+            )}
+
+            {/* Glowing Tactical Health HUD with sleek war-game aesthetics */}
+            <g transform={`rotate(${-rotation}) translate(-16, -24)`}>
+                <rect width="32" height="3.5" fill="#1f2937" rx="1.5" stroke="#4b5563" strokeWidth="0.8" />
+                <rect width={32 * (enemy.hp / enemy.maxHp)} height="3.5" fill={enemy.hp/enemy.maxHp < 0.35 ? "#ef4444" : "#22c55e"} rx="1" />
+            </g>
+        </g>
+    );
+});
+
+const TurretEntity = React.memo(({ slot, tower }: { slot: {x: number, y: number}, tower: PlacedTurret }) => {
+    // Beautiful, highly color-coherent metal military color themes 
+    let baseSteel = "#4b5563"; // Medium grey steel
+    let primaryTint = "#16a34a"; // Army Green tactical (mitrailleuse)
+    let secondaryTint = "#15803d"; // Secondary darker green
+    
+    if (tower.type === 'mitrailleuse') {
+        primaryTint = "#16a34a"; // Green matching selection UI
+        secondaryTint = "#15803d";
+    } else if (tower.type === 'canon') {
+        primaryTint = "#c2410c"; // Rust Orange matching selection UI
+        secondaryTint = "#9a3412";
+    } else if (tower.type === 'dca') {
+        primaryTint = "#0e7490"; // Deep Cyan matching selection UI
+        secondaryTint = "#0891b2";
+    } else if (tower.type === 'plasma') {
+        primaryTint = "#9333ea"; // Magnetic Dark Purple matching selection UI
+        secondaryTint = "#6b21a8";
+    } else if (tower.type === 'mortier') {
+        primaryTint = "#dc2626"; // Crimson Red matching selection UI
+        secondaryTint = "#991b1b";
+    } else if (tower.type === 'missile') {
+        primaryTint = "#db2677"; // Hot Precision Pink matching selection UI
+        secondaryTint = "#9d174d";
+    }
+
+    return (
+        <g transform={`translate(${slot.x}, ${slot.y})`}>
+            {/* Reinforced concrete bunker installation underlay */}
+            <circle r="40" fill="rgba(24, 24, 27, 0.45)" stroke="#111827" strokeWidth="1" />
+            
+            {/* Dark steel circular foundation with hazard stripes */}
+            <circle r="34" fill="#2d3748" stroke="#0f172a" strokeWidth="3" />
+            <circle r="29" fill="none" stroke={`${primaryTint}aa`} strokeWidth="1.8" strokeDasharray="4 8" opacity="0.9" />
+            <circle r="26" fill="#1e293b" />
+
+            {/* Status light LED indicating energy level / online */}
+            <circle cx="-16" cy="-16" r="3.2" fill={primaryTint} className="animate-pulse" />
+            <circle cx="-16" cy="-16" r="1.3" fill="#fff" />
+
+            {/* Static protective sandbags circling the front and sides of the turret slot */}
+            <path d="M -23 20 Q 0 35 23 20" fill="none" stroke="#78350f" strokeWidth="6" strokeLinecap="round" opacity="0.9" />
+            <path d="M -23 20 Q 0 35 23 20" fill="none" stroke="#d97706" strokeWidth="5" strokeLinecap="round" strokeDasharray="6 3" opacity="0.95" />
+
+            {/* Rotated Gun-Specific Weapon Station Tracking Group */}
+            <g transform={`rotate(${(tower.rotation ?? -90) + 90})`}>
+                {tower.type === 'mitrailleuse' ? (
+                    // Dual Heavy .50cal Gatling platform
+                    <g>
+                        {/* Armor plate box */}
+                        <rect x="-10" y="-12" width="20" height="20" rx="2" fill={primaryTint} stroke="#111827" strokeWidth="2" />
+                        <line x1="-5" y1="-12" x2="-5" y2="-28" stroke="#111827" strokeWidth="2.8" />
+                        <line x1="5" y1="-12" x2="5" y2="-28" stroke="#111827" strokeWidth="2.8" />
+                        {/* Ammo chain feeds */}
+                        <path d="M -16 6 C -14 0 -8 -5 -5 -1" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="2 1" />
+                        <circle cx="0" cy="4" r="3.5" fill={secondaryTint} />
+                    </g>
+                ) : tower.type === 'canon' ? (
+                    // Heavy Steel Recoil Tank-Buster Artillery
+                    <g>
+                        {/* Hexagonal heavy rotating shield */}
+                        <polygon points="-12,11 12,11 14,-7 0,-13 -14,-7" fill={primaryTint} stroke="#0f172a" strokeWidth="2" />
+                        {/* Hydraulic piston recoil bars */}
+                        <line x1="-4" y1="-12" x2="-4" y2="-32" stroke={secondaryTint} strokeWidth="4.5" />
+                        <line x1="0" y1="-4" x2="0" y2="-34" stroke="#0f172a" strokeWidth="4" />
+                        {/* Big artillery muzzle brake */}
+                        <rect x="-3" y="-36" width="6" height="4.5" rx="1.2" fill="#0f172a" />
+                    </g>
+                ) : tower.type === 'dca' ? (
+                    // High-Angle Twin FLAK cannons plus radar scanner dish
+                    <g>
+                        <rect x="-11" y="-10" width="22" height="18" rx="3" fill={primaryTint} stroke="#0f172a" strokeWidth="2" />
+                        {/* Twin extra long cannons */}
+                        <line x1="-5" y1="-8" x2="-5" y2="-33" stroke="#0f172a" strokeWidth="2.6" />
+                        <line x1="5" y1="-8" x2="5" y2="-33" stroke="#0f172a" strokeWidth="2.6" />
+                        <rect x="-6.5" y="-35" width="3" height="4" fill="#000" />
+                        <rect x="3.5" y="-35" width="3" height="4" fill="#000" />
+                        {/* Anti-aircraft tracking radar dome on right side */}
+                        <path d="M 6 -4 A 5 5 0 0 1 14 4" fill="none" stroke={secondaryTint} strokeWidth="2.2" className="animate-[pulse_1.5s_infinite]" />
+                    </g>
+                ) : tower.type === 'plasma' ? (
+                    // Electromagnetic Railgun coils
+                    <g>
+                        <circle cx="0" cy="0" r="11" fill={primaryTint} stroke="#1e1b4b" strokeWidth="2" />
+                        {/* Plasma discharge capacitor rings */}
+                        <circle cx="0" cy="0" r="6" fill="#d8b4fe" className="animate-pulse" />
+                        <line x1="0" y1="0" x2="0" y2="-28" stroke="#1e1b4b" strokeWidth="4" />
+                        {/* Violet conductive wires wrapping the railgun barrel */}
+                        {[-10, -16, -22].map((yHeight) => (
+                            <circle key={`cl-${yHeight}`} cx="0" cy={yHeight} r="3.2" fill="none" stroke="#c084fc" strokeWidth="1.6" />
+                        ))}
+                        <ellipse cx="0" cy="-30" rx="3" ry="1.5" fill="#d8b4fe" />
+                    </g>
+                ) : tower.type === 'mortier' ? (
+                    // Extra Fat Trench Mortar angle Tube
+                    <g>
+                        <circle cx="0" cy="0" r="12" fill={primaryTint} stroke={secondaryTint} strokeWidth="2.2" />
+                        {/* Giant mortar barrel mouth facing upwards/angled */}
+                        <circle cx="0" cy="-3" r="5.5" fill="#111827" stroke={secondaryTint} strokeWidth="3" />
+                        <line x1="0" y1="2" x2="0" y2="-18" stroke="#374151" strokeWidth="7" strokeLinecap="round" />
+                        <circle cx="0" cy="-18" r="4.2" fill="#ef4444" />
+                    </g>
+                ) : (
+                    // Tactical Surface-to-Air quad Missiles
+                    <g transform="scale(0.95)">
+                        <rect x="-12" y="-10" width="24" height="20" rx="2" fill={primaryTint} stroke={secondaryTint} strokeWidth="2.2" />
+                        {/* 3 highly detailed rocket nosecones ready to fly */}
+                        {[-7, 0, 7].map((offset) => (
+                            <g key={`ms-${offset}`} transform={`translate(${offset}, 0)`}>
+                                <rect x="-2" y="-22" width="4" height="22" fill="#fbcfe8" rx="1" />
+                                {/* Detailed magenta/pink tip of rocket warheads */}
+                                <path d="M-2,-22 L2,-22 L0,-29 Z" fill={primaryTint} />
+                                {/* Fin stabilisers */}
+                                <line x1="-3.5" y1="-4" x2="3.5" y2="-4" stroke={secondaryTint} strokeWidth="1.5" />
+                            </g>
+                        ))}
+                    </g>
+                )}
+
+                {/* Tactical Pointer Laser sight line projecting from muzzle when target active */}
+                {tower.targetId && (
+                    <g>
+                        <line x1="0" y1="-32" x2="0" y2="-100" stroke={primaryTint} strokeWidth="1.2" strokeDasharray="3 4" opacity="0.65" />
+                        <circle cx="0" cy="-100" r="2.5" fill={primaryTint} opacity="0.85" className="animate-ping" />
+                    </g>
+                )}
+            </g>
+
+            {/* Tactical Level-Badge speech balloon panel */}
+            <g transform="translate(0, -48)" style={{ filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))' }}>
+                <rect x="-19" y="-8" width="38" height="15" rx="4" fill="#111827" stroke="#374151" strokeWidth="1" />
+                <polygon points="-3,7 0,10 3,7" fill="#111827" stroke="#374151" strokeWidth="1" />
+                <polygon points="-2.5,6 2.5,6 0,8.5" fill="#111827" />
+                <text y="3" textAnchor="middle" fill="#22c55e" fontSize="7.8" fontWeight="bold" style={{ fontFamily: 'monospace' }}>
+                    LVL {tower.level}
+                </text>
+            </g>
+
+            {/* Armor / HP structural bars */}
+            {tower.hp < tower.maxHp && (
+                <g transform="translate(0, 24)">
+                    <rect x="-18" y="0" width="36" height="3" rx="1" fill="rgba(0,0,0,0.4)" />
+                    <rect x="-18" y="0" width={36 * (tower.hp / tower.maxHp)} height="3" rx="1" fill="#ef4444" />
+                </g>
+            )}
+        </g>
+    );
+});
+
+interface GameBoardProps {
+    gameState: GameState;
+    buildTurret: (slotId: string, x: number, y: number, type: TowerType) => void;
+    selectedTower: TowerType | null;
+    setSelectedTower: (type: TowerType | null) => void;
+    selectedTurretId: string | null;
+    setSelectedTurretId: (id: string | null) => void;
+    isAirstrikeMode: boolean;
+    setIsAirstrikeMode: (val: boolean) => void;
+    onCallAirstrike: (x: number, y: number) => void;
 }
+
+export const GameBoard: React.FC<GameBoardProps> = ({ 
+    gameState, 
+    buildTurret,
+    selectedTower,
+    setSelectedTower,
+    selectedTurretId,
+    setSelectedTurretId,
+    isAirstrikeMode,
+    setIsAirstrikeMode,
+    onCallAirstrike
+}) => {
+    const svgRef = useRef<SVGSVGElement>(null);
+
+    const isNight = useMemo(() => {
+        return gameState.activeModifier?.type === 'fog' || (gameState.level % 2 === 1);
+    }, [gameState.activeModifier, gameState.level]);
+
+    // Grim battle map themes 
+    const theme = useMemo(() => {
+        if (isNight) {
+            return {
+                floor: '#111317', // Midnight tactical charcoal
+                road: '#1a1f26',
+                accent: '#ef4444'
+            };
+        }
+        return {
+            floor: '#2c2923', // Muddy, sand gravel battlefield
+            road: '#1c1a17',
+            accent: '#f59e0b'
+        };
+    }, [isNight]);
+
+    const TURRET_SLOTS = useMemo(() => getTurretSlotsForLevel(gameState.level), [gameState.level]);
+
+    const handleBoardClick = useCallback((e: React.MouseEvent) => {
+        if (!svgRef.current) return;
+        const pt = svgRef.current.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const cursorPoint = pt.matrixTransform(svgRef.current.getScreenCTM()?.inverse());
+        
+        if (isAirstrikeMode) {
+            onCallAirstrike(cursorPoint.x, cursorPoint.y);
+            setIsAirstrikeMode(false);
+        } else {
+            // Check if player clicked near an existing slot
+            const slot = TURRET_SLOTS.find(s => {
+                const dist = Math.hypot(s.x - cursorPoint.x, s.y - cursorPoint.y);
+                return dist < 45;
+            });
+
+            if (slot) {
+                const existingTower = gameState.turrets[slot.id];
+                if (existingTower) {
+                    setSelectedTurretId(slot.id);
+                    setSelectedTower(null);
+                } else {
+                    if (selectedTower) {
+                        buildTurret(slot.id, slot.x, slot.y, selectedTower);
+                        setSelectedTower(null);
+                    } else {
+                        setSelectedTurretId(null);
+                    }
+                }
+            } else {
+                setSelectedTurretId(null);
+            }
+        }
+    }, [
+        isAirstrikeMode, 
+        onCallAirstrike, 
+        setIsAirstrikeMode, 
+        TURRET_SLOTS, 
+        gameState.turrets, 
+        selectedTower, 
+        buildTurret, 
+        setSelectedTower, 
+        setSelectedTurretId
+    ]);
+
+    return (
+        <div className="relative w-full h-full overflow-hidden border border-neutral-800 shadow-2xl font-mono transition-colors duration-1000">
+            {/* Vector battlefield Map svg */}
+            <svg
+                ref={svgRef}
+                viewBox="0 -100 1024 1100"
+                className="w-full h-full object-contain cursor-crosshair touch-none select-none"
+                onClick={handleBoardClick}
+                onTouchStart={(e) => {
+                    if (e.touches.length > 1) e.preventDefault();
+                }}
+                preserveAspectRatio="xMidYMid slice"
+            >
+                <defs>
+                    <radialGradient id="neonGlow">
+                        <stop offset="0%" stopColor="#ef4444" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+                    </radialGradient>
+                    <radialGradient id="wazeBoom">
+                        <stop offset="0%" stopColor="#f97316" stopOpacity="0.95" />
+                        <stop offset="40%" stopColor="#ef4444" stopOpacity="0.7" />
+                        <stop offset="100%" stopColor="#1e1b4b" stopOpacity="0" />
+                    </radialGradient>
+                </defs>
+
+                {/* Vector Map Tiles & Roads */}
+                <StaticBackground level={gameState.level} theme={theme} isNight={isNight} />
+
+                {/* HQ Allie / Base defensive citadel at the end of track */}
+                <g transform="translate(512, 955)">
+                    {/* Shadow outline */}
+                    <ellipse cx="0" cy="18" rx="42" ry="12" fill="rgba(0,0,0,0.5)" />
+                    {/* Fortified headquarters complex concrete blast shields */}
+                    <path d="M -35 15 L -45 -18 L -20 -33 L 20 -33 L 45 -18 L 35 15 Z" fill="#3f444e" stroke="#111827" strokeWidth="3" />
+                    <rect x="-18" y="-12" width="36" height="26" fill="#1e293b" stroke="#111827" strokeWidth="2" />
+                    {/* Command hatch door */}
+                    <rect x="-8" y="0" width="16" height="14" fill="#020617" />
+                    
+                    {/* Hazard warning lines */}
+                    <path d="M-18,-20 L18,-20" stroke="#fbbf24" strokeWidth="2.2" strokeDasharray="3 3" />
+                    
+                    {/* Pulsing red beacon lights */}
+                    <circle cx="-35" cy="-18" r="4.5" fill="#f43f5e" className="animate-ping" />
+                    <circle cx="-35" cy="-18" r="3" fill="#ef4444" />
+                    <circle cx="35" cy="-18" r="3" fill="#ef4444" />
+
+                    <g transform="translate(0, -42)">
+                        <rect x="-42" y="-8" width="84" height="15" rx="3" fill="#1e293b" stroke="#374151" strokeWidth="1.2" />
+                        <text y="3" textAnchor="middle" fill="#22c55e" fontSize="7.8" fontWeight="bold">HQ ALLIÉ</text>
+                    </g>
+                </g>
+
+                {/* Visual range indicator ring for placed/selected or placing preview slots */}
+                {TURRET_SLOTS.map(slot => {
+                    const tower = gameState.turrets[slot.id];
+                    const isSelected = selectedTurretId === slot.id;
+                    const isPlacing = selectedTower && !tower; // hovered slot while holding a selected tower
+                    
+                    let range = 0;
+                    let color = "#eab308";
+                    
+                    if (isSelected && tower) {
+                        range = tower.range;
+                        if (tower.type === 'mitrailleuse') color = "#16a34a";
+                        else if (tower.type === 'canon') color = "#ea580c";
+                        else if (tower.type === 'dca') color = "#00cbff";
+                        else if (tower.type === 'plasma') color = "#a855f7";
+                        else if (tower.type === 'mortier') color = "#ef4444";
+                        else if (tower.type === 'missile') color = "#ec4899";
+                    } else if (isPlacing && selectedTower) {
+                         const config = TOWER_CONFIGS[selectedTower];
+                         range = config.range;
+                         if (selectedTower === 'mitrailleuse') color = "#16a34a";
+                         else if (selectedTower === 'canon') color = "#ea580c";
+                         else if (selectedTower === 'dca') color = "#00cbff";
+                         else if (selectedTower === 'plasma') color = "#a855f7";
+                         else if (selectedTower === 'mortier') color = "#ef4444";
+                         else if (selectedTower === 'missile') color = "#ec4899";
+                    }
+                    
+                    if (range <= 0) return null;
+                    
+                    return (
+                        <g key={`range-ring-${slot.id}`} transform={`translate(${slot.x}, ${slot.y})`} style={{ pointerEvents: 'none' }}>
+                            {/* Animated tactical sonar range ring */}
+                            <circle 
+                                r={range} 
+                                fill={`${color}06`} 
+                                stroke={color} 
+                                strokeWidth="2" 
+                                strokeDasharray="6 8" 
+                                className="animate-[pulse_2.2s_infinite]" 
+                                opacity="0.4" 
+                            />
+                            <circle 
+                                r={range} 
+                                fill="none" 
+                                stroke={`${color}33`} 
+                                strokeWidth="0.8" 
+                                opacity="0.25" 
+                            />
+                        </g>
+                    );
+                })}
+
+                {/* Slots and Turrets placement */}
+                {TURRET_SLOTS.map(slot => {
+                    const tower = gameState.turrets[slot.id];
+                    return tower ? (
+                        <TurretEntity key={slot.id} slot={slot} tower={tower} />
+                    ) : (
+                        <g 
+                            key={slot.id} 
+                            transform={`translate(${slot.x}, ${slot.y})`} 
+                            className="cursor-pointer group"
+                        >
+                            {/* Inner targeting radar circle */}
+                            <circle r="36" fill="rgba(239, 68, 68, 0.03)" stroke="rgba(239, 68, 68, 0.09)" strokeDasharray="2 4" />
+                            {/* Heavy base outline */}
+                            <circle 
+                                r="22" 
+                                fill="none" 
+                                stroke={isNight ? '#374151' : '#52525b'} 
+                                strokeWidth="2" 
+                                className="group-hover:stroke-amber-500 group-hover:stroke-[2px] transition-all" 
+                            />
+                            {/* Inner slot crosshair placement */}
+                            <path 
+                                d="M -6 0 L 6 0 M 0 -6 L 0 6" 
+                                stroke={isNight ? '#9ca3af' : '#27272a'} 
+                                strokeWidth="2" 
+                                opacity="0.6" 
+                                className="group-hover:opacity-100 transition-opacity" 
+                            />
+                        </g>
+                    );
+                })}
+
+                {/* Enemies drawing */}
+                {gameState.enemies.map(enemy => (
+                    <EnemyEntity key={enemy.id} enemy={enemy} />
+                ))}
+
+                {/* Dynamic, type-matched, high coherence bullet tracers */}
+                {gameState.projectiles.map(p => {
+                    let tracerColor = "#f59e0b";
+                    let glowColor = "#ef4444";
+                    let thickness = "1.8";
+                    
+                    if (p.towerType === 'mitrailleuse') {
+                        tracerColor = "#22c55e";
+                        glowColor = "#15803d";
+                        thickness = "1.5";
+                    } else if (p.towerType === 'canon') {
+                        tracerColor = "#ea580c";
+                        glowColor = "#c2410c";
+                        thickness = "2.4";
+                    } else if (p.towerType === 'dca') {
+                        tracerColor = "#06b6d4";
+                        glowColor = "#0e7490";
+                        thickness = "1.8";
+                    } else if (p.towerType === 'plasma') {
+                        tracerColor = "#c084fc";
+                        glowColor = "#9333ea";
+                        thickness = "3.2";
+                    } else if (p.towerType === 'mortier') {
+                        tracerColor = "#ef4444";
+                        glowColor = "#b91c1c";
+                        thickness = "3.8";
+                    } else if (p.towerType === 'missile') {
+                        tracerColor = "#ec4899";
+                        glowColor = "#be185d";
+                        thickness = "2.8";
+                    }
+
+                    return (
+                        <g key={p.id}>
+                            {/* Dynamic tracer tail line */}
+                            <line 
+                                x1={p.x} 
+                                y1={p.y} 
+                                x2={p.x - (p.targetX - p.x) * (p.towerType === 'mortier' ? 0.05 : 0.12)} 
+                                y2={p.y - (p.targetY - p.y) * (p.towerType === 'mortier' ? 0.05 : 0.12)} 
+                                stroke={tracerColor} 
+                                strokeWidth={thickness} 
+                                opacity="0.85" 
+                            />
+                            {/* Inner energy bolt core */}
+                            <circle 
+                                cx={p.x} 
+                                cy={p.y} 
+                                r={p.towerType === 'mortier' ? "3.8" : p.towerType === 'canon' ? "3.0" : "2.2"} 
+                                fill="#fff" 
+                                style={{ filter: `drop-shadow(0 0 5px ${glowColor})` }} 
+                            />
+                        </g>
+                    );
+                })}
+
+                {/* Perfectly color-coherent Blast Explosions */}
+                <AnimatePresence>
+                    {gameState.explosions.map(exp => (
+                        <motion.g key={exp.id}>
+                            <defs>
+                                <radialGradient id={`expGrad-${exp.id}`}>
+                                    <stop offset="0%" stopColor={exp.color || "#f97316"} stopOpacity="0.95" />
+                                    <stop offset="42%" stopColor={exp.color || "#ef4444"} stopOpacity="0.65" />
+                                    <stop offset="100%" stopColor="#1e1b4b" stopOpacity="0" />
+                                </radialGradient>
+                            </defs>
+                            <motion.circle
+                                initial={{ r: 0, opacity: 1 }}
+                                animate={{ r: exp.radius * 1.8, opacity: 0 }}
+                                exit={{ opacity: 0 }}
+                                cx={exp.x}
+                                cy={exp.y}
+                                fill={`url(#expGrad-${exp.id})`}
+                            />
+                            <motion.circle
+                                initial={{ r: 0, opacity: 1 }}
+                                animate={{ r: exp.radius, opacity: 0 }}
+                                exit={{ opacity: 0 }}
+                                cx={exp.x}
+                                cy={exp.y}
+                                fill="#ffffff"
+                                opacity="0.7"
+                            />
+                        </motion.g>
+                    ))}
+                </AnimatePresence>
+
+                {/* Airstrike Reticle warning */}
+                {isAirstrikeMode && (
+                    <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                         <circle cx="512" cy="512" r="1500" fill="rgba(239, 68, 68, 0.09)" pointerEvents="none" />
+                    </motion.g>
+                )}
+            </svg>
+
+            {/* Atmosphere Tactical Command HUD Banner */}
+            <div className="absolute top-3 left-3 right-3 z-40 flex justify-between pointer-events-none gap-2">
+                {/* Tactical radar scanner readout */}
+                <div className="bg-[#111317]/95 text-[#e2e8f0] px-3.5 py-2.5 rounded-xl shadow-2xl flex items-center gap-2.5 backdrop-blur-md border border-neutral-700 pointer-events-auto max-w-[280px] transition-transform">
+                    <div className="bg-red-950 text-red-500 p-1.5 rounded-lg flex items-center justify-center border border-red-900 shrink-0">
+                        {/* High fidelity tactical scope indicator */}
+                        <Crosshair className="w-5 h-5 animate-[spin_5s_linear_infinite]" />
+                    </div>
+                    <div className="flex flex-col text-left">
+                        <span className="text-[8px] opacity-75 font-semibold font-mono tracking-widest uppercase">SYSTÈME DE RADAR v9.12</span>
+                        <span className="text-[10px] font-black leading-tight tracking-tight text-red-400">
+                            {gameState.enemies.length > 0 
+                              ? `${gameState.enemies.length} MENACES HOSTILES EN PLAN ACCÈS !` 
+                              : "ZONE SOUS CONTROLE. AUCUN ENGAGEMENT."}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Military HQ Shield indicator */}
+                <div className="bg-[#111317] text-white p-2 rounded-xl shadow-2xl flex flex-col items-center justify-center border-2 border-red-700 w-14 h-14 pointer-events-auto shrink-0 select-none">
+                    <span className="text-[6px] font-bold tracking-wider leading-none text-neutral-400 uppercase">BASE PV</span>
+                    <span className="text-lg font-black text-red-500 leading-tight">
+                        {gameState.lives}
+                    </span>
+                    <span className="text-[6px] font-semibold tracking-widest text-[#22c55e]">ONLINE</span>
+                </div>
+            </div>
+
+            {/* Bottom battlefield status drawer */}
+            <div className="absolute bottom-3 left-3 right-3 z-40 flex justify-between pointer-events-none gap-2 items-end">
+                {/* Intel reports box */}
+                <div className="bg-[#111317]/95 backdrop-blur-md px-3 py-2 rounded-xl shadow-2xl border border-neutral-800 pointer-events-auto flex items-center gap-2 font-mono">
+                    <div className="w-4 h-4 rounded-full bg-amber-600 flex items-center justify-center shadow-md text-white font-black text-[9px] relative shrink-0">
+                        <AlertTriangle className="w-2.5 h-2.5 text-white" />
+                    </div>
+                    <div className="flex flex-col text-left">
+                        <span className="text-[7px] text-zinc-500 font-extrabold uppercase tracking-widest leading-none">Rapport Intel</span>
+                        <span className="text-[9px] font-bold text-zinc-300 tracking-tight">
+                            {gameState.activeModifier ? `${gameState.activeModifier.name} activé` : "RAS - Grille opérationnelle"}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Sector locator bubble */}
+                <div className="bg-[#111317]/95 backdrop-blur-md text-slate-300 px-3 py-2 rounded-xl shadow-2xl border border-neutral-800 pointer-events-auto flex flex-col items-start min-w-[120px] text-left leading-none">
+                    <div className="flex items-center gap-1.5 leading-none">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></div>
+                        <span className="text-[9px] font-black tracking-widest text-red-500 uppercase">COMBAT</span>
+                    </div>
+                    <span className="text-[8px] text-zinc-500 font-mono mt-1 uppercase">
+                        SEC: {gameState.level} • {gameState.mode.toUpperCase()}
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+};
