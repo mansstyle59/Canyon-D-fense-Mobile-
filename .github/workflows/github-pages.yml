@@ -3,12 +3,14 @@ name: Deploy GitHub Pages
 on:
   push:
     branches:
-      - main # Change this to your default branch if not 'main'
+      - main
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
