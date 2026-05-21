@@ -1,0 +1,6 @@
+{
+  "name": "Canyon Défense Mobile",
+  "description": "Jeu mobile landscape premium de tower défense sci-fi avec retours haptiques et modificateurs de vagues aléatoires.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
